@@ -1,17 +1,25 @@
-# vocabulary_trainer
+# Vocabulary Trainer
 
-A new Flutter project.
+A Flutter app for practicing German and European Portuguese vocabulary. It
+works offline, loads its bundled vocabulary into local storage, and keeps
+learning progress across launches.
 
-## Getting Started
+## Run
 
-This project is a starting point for a Flutter application.
+Use an Android device or emulator:
 
-A few resources to get you started if this is your first Flutter project:
+```sh
+flutter pub get
+flutter run
+```
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+## Verify
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+```sh
+flutter analyze
+flutter test
+```
+
+Product and architecture requirements are documented in
+[`docs/product_spec.md`](docs/product_spec.md) and
+[`docs/system_spec.md`](docs/system_spec.md).
