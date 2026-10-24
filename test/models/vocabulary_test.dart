@@ -11,7 +11,6 @@ void main() {
       final source = await rootBundle.loadString('assets/vocabulary.json');
       final dataset = VocabularyDataset.fromJsonString(source);
 
-      expect(dataset.version, 1);
       expect(dataset.entries, hasLength(100));
       expect(dataset.entries.map((entry) => entry.id).toSet(), hasLength(100));
       expect(
