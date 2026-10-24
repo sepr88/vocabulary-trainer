@@ -54,3 +54,15 @@ Keep the experience simple, intuitive, fast to start, focused, consistent, acces
 - **PRD-015:** Cloud synchronization and user accounts are not part of the MVP.
 
 ## Open product decisions
+
+- What scope and timeline should be used to expand the bundled vocabulary database?
+- Should the app include a conjugation trainer, and if so, for which languages, tenses, and proficiency levels?
+- Should users be able to reset their training history and progress, and what confirmation or recovery safeguards should apply?
+- Should vocabulary entries include example sentences showing how each word is used in context?
+- Should users be able to review words they missed, and how should that review relate to regular practice sessions?
+- should i group words into topics such as travel, food, work?
+- should i add learning goals and achievements?
+- should i add notifications to remind the user of learning?
+- should i add a pronouncation comparison? users record themselves and compare against a pre-recorded reference.
+- should add false-friends alerts? i could highlight words after revealing that sound or look similar.
+- should i add a "fill in the blank" practice? 
