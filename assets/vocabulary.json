@@ -1,5 +1,5 @@
 {
-  "version": 1,
+  "version": 2,
   "entries": [
     {"id":"de-001","level":"beginner","de":{"primary":"das Haus","accepted":["das Haus","Haus"]},"pt-PT":{"primary":"a casa","accepted":["a casa","casa"]}},
     {"id":"de-002","level":"beginner","de":{"primary":"die Wohnung","accepted":["die Wohnung","Wohnung"]},"pt-PT":{"primary":"o apartamento","accepted":["o apartamento","apartamento"]}},
@@ -69,7 +69,7 @@
     {"id":"de-066","level":"beginner","de":{"primary":"der Mann","accepted":["der Mann","Mann"]},"pt-PT":{"primary":"o homem","accepted":["o homem","homem"]}},
     {"id":"de-067","level":"beginner","de":{"primary":"die Frau","accepted":["die Frau","Frau"]},"pt-PT":{"primary":"a mulher","accepted":["a mulher","mulher"]}},
     {"id":"de-068","level":"beginner","de":{"primary":"der Hund","accepted":["der Hund","Hund"]},"pt-PT":{"primary":"o cão","accepted":["o cão","cão"]}},
-    {"id":"de-069","level":"beginner","de":{"primary":"die Katze","accepted":["die Katze","Katze"]},"pt-PT":{"primary":"o gato","accepted":["o gato","gato"]}},
+    {"id":"de-069","level":"beginner","de":{"primary":"die Katze","accepted":["die Katze","Katze"]},"pt-PT":{"primary":"o gato","accepted":["o gato","gato", "a gata", "gata"]}},
     {"id":"de-070","level":"beginner","de":{"primary":"die Kleidung","accepted":["die Kleidung","Kleidung"]},"pt-PT":{"primary":"a roupa","accepted":["a roupa","roupa"]}},
     {"id":"de-071","level":"beginner","de":{"primary":"sein","accepted":["sein"]},"pt-PT":{"primary":"ser","accepted":["ser","estar"]}},
     {"id":"de-072","level":"beginner","de":{"primary":"haben","accepted":["haben"]},"pt-PT":{"primary":"ter","accepted":["ter"]}},
