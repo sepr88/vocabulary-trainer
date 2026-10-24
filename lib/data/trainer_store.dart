@@ -25,6 +25,7 @@ class ProgressSnapshot {
 
 abstract interface class TrainerStore {
   Future<void> reconcile(VocabularyDataset dataset);
+  Future<int> activeVocabularyVersion();
   Future<List<VocabularyEntry>> activeEntries();
   Future<ProgressSnapshot> progress();
   Future<bool> recordAttempt({
@@ -114,6 +115,28 @@ class SqliteTrainerStore implements TrainerStore {
         'value': '${dataset.version}',
       }, conflictAlgorithm: ConflictAlgorithm.replace);
     });
+  }
+
+  @override
+  Future<int> activeVocabularyVersion() async {
+    final rows = await _database.query(
+      'metadata',
+      columns: const ['value'],
+      where: 'key = ?',
+      whereArgs: const ['vocabulary_version'],
+      limit: 1,
+    );
+    if (rows.isEmpty) {
+      throw StateError(
+        'The active vocabulary version has not been initialized.',
+      );
+    }
+    final value = rows.single['value'];
+    final version = value is String ? int.tryParse(value) : null;
+    if (version == null || version <= 0) {
+      throw StateError('The active vocabulary version is invalid.');
+    }
+    return version;
   }
 
   @override

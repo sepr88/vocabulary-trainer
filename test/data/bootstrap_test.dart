@@ -93,6 +93,9 @@ class _RecordingStore implements TrainerStore {
   Future<List<VocabularyEntry>> activeEntries() async => const [];
 
   @override
+  Future<int> activeVocabularyVersion() async => 1;
+
+  @override
   Future<void> close() async {
     closed = true;
   }

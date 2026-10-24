@@ -9,6 +9,7 @@
 ## Home screen
 
 - **PRD-004:** The home screen provides an action to start a vocabulary practice session, a summary of learning progress, and an uncluttered layout.
+- **PRD-031:** The home screen displays, at its bottom, the version number of the vocabulary dataset currently active in the local vocabulary store.
 
 ## Vocabulary practice
 

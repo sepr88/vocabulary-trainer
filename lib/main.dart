@@ -111,6 +111,7 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> {
   List<VocabularyEntry> _entries = const [];
   ProgressSnapshot? _progress;
+  int? _vocabularyVersion;
   Object? _loadError;
   bool _loading = true;
 
@@ -128,10 +129,12 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final entries = await widget.store.activeEntries();
       final progress = await widget.store.progress();
+      final vocabularyVersion = await widget.store.activeVocabularyVersion();
       if (!mounted) return;
       setState(() {
         _entries = entries;
         _progress = progress;
+        _vocabularyVersion = vocabularyVersion;
         _loading = false;
       });
     } catch (error) {
@@ -161,36 +164,50 @@ class _HomeScreenState extends State<HomeScreen> {
           ? const Center(child: CircularProgressIndicator())
           : _loadError != null
           ? _ErrorPanel(error: _loadError!, onRetry: _load)
-          : RefreshIndicator(
-              onRefresh: _load,
-              child: ListView(
-                padding: const EdgeInsets.all(20),
-                children: [
-                  Text(
-                    'Your progress',
-                    style: Theme.of(context).textTheme.headlineMedium,
-                  ),
-                  const SizedBox(height: 16),
-                  _ProgressOverview(progress: _progress!),
-                  const SizedBox(height: 24),
-                  if (_entries.isEmpty)
-                    const Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(20),
-                        child: Text(
-                          'No vocabulary entries are available. '
-                          'Practice is disabled.',
-                          textAlign: TextAlign.center,
+          : Column(
+              children: [
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: _load,
+                    child: ListView(
+                      padding: const EdgeInsets.all(20),
+                      children: [
+                        Text(
+                          'Your progress',
+                          style: Theme.of(context).textTheme.headlineMedium,
                         ),
-                      ),
+                        const SizedBox(height: 16),
+                        _ProgressOverview(progress: _progress!),
+                        const SizedBox(height: 24),
+                        if (_entries.isEmpty)
+                          const Card(
+                            child: Padding(
+                              padding: EdgeInsets.all(20),
+                              child: Text(
+                                'No vocabulary entries are available. '
+                                'Practice is disabled.',
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ),
+                        FilledButton.icon(
+                          onPressed: _entries.isEmpty ? null : _startPractice,
+                          icon: const Icon(Icons.play_arrow),
+                          label: const Text('Start practice'),
+                        ),
+                      ],
                     ),
-                  FilledButton.icon(
-                    onPressed: _entries.isEmpty ? null : _startPractice,
-                    icon: const Icon(Icons.play_arrow),
-                    label: const Text('Start practice'),
                   ),
-                ],
-              ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                  child: Text(
+                    'Vocabulary version $_vocabularyVersion',
+                    style: Theme.of(context).textTheme.bodySmall,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ],
             ),
     );
   }

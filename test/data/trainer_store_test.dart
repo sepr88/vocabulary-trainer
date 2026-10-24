@@ -27,6 +27,7 @@ void main() {
       await store.reconcile(sampleDataset());
 
       expect(await store.activeEntries(), hasLength(1));
+      expect(await store.activeVocabularyVersion(), 1);
       expect(
         await store.recordAttempt(
           attemptId: 'session:0',
@@ -94,6 +95,7 @@ void main() {
         ),
       );
 
+      expect(await store.activeVocabularyVersion(), 2);
       final entries = await store.activeEntries();
       expect(entries.map((entry) => entry.id).toSet(), {'changed', 'new'});
       expect(

@@ -10,9 +10,10 @@ void main() {
   testWidgets('checks an answer, summarizes it, and refreshes home progress', (
     tester,
   ) async {
-    final store = _MemoryStore([sampleEntry()]);
+    final store = _MemoryStore([sampleEntry()], vocabularyVersion: 7);
     await tester.pumpWidget(MyApp(storeLoader: () async => store));
     await tester.pumpAndSettle();
+    expect(find.text('Vocabulary version 7'), findsOneWidget);
 
     await tester.tap(find.text('Start practice'));
     await tester.pumpAndSettle();
@@ -98,9 +99,10 @@ void main() {
 }
 
 class _MemoryStore implements TrainerStore {
-  _MemoryStore(this.entries);
+  _MemoryStore(this.entries, {this.vocabularyVersion = 1});
 
   final List<VocabularyEntry> entries;
+  final int vocabularyVersion;
   final Map<String, ({String entryId, bool correct})> _recorded = {};
 
   List<bool> get attempts =>
@@ -108,6 +110,9 @@ class _MemoryStore implements TrainerStore {
 
   @override
   Future<List<VocabularyEntry>> activeEntries() async => entries;
+
+  @override
+  Future<int> activeVocabularyVersion() async => vocabularyVersion;
 
   @override
   Future<void> close() async {}
