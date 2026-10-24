@@ -47,6 +47,89 @@ void main() {
     expect(session.completedCount, 1);
   });
 
+  test('uses the configured bounded selection weight', () {
+    expect(
+      const PracticeHistory(
+        completedAttempts: 0,
+        incorrectAttempts: 0,
+      ).selectionWeight,
+      4,
+    );
+    expect(
+      const PracticeHistory(
+        completedAttempts: 3,
+        incorrectAttempts: 0,
+      ).selectionWeight,
+      1,
+    );
+    expect(
+      const PracticeHistory(
+        completedAttempts: 10,
+        incorrectAttempts: 8,
+      ).selectionWeight,
+      4,
+    );
+  });
+
+  test(
+    'weighted draws favor missed entries and still select without repeats',
+    () {
+      final entries = [
+        sampleEntry(id: 'well-practiced'),
+        sampleEntry(id: 'often-missed'),
+        ...List.generate(14, (index) => sampleEntry(id: 'other-$index')),
+      ];
+      final history = {
+        'well-practiced': const PracticeHistory(
+          completedAttempts: 3,
+          incorrectAttempts: 0,
+        ),
+        'often-missed': const PracticeHistory(
+          completedAttempts: 3,
+          incorrectAttempts: 3,
+        ),
+        for (var index = 0; index < 14; index++)
+          'other-$index': const PracticeHistory(
+            completedAttempts: 3,
+            incorrectAttempts: 0,
+          ),
+      };
+      final session = PracticeSession.create(
+        entries,
+        practiceHistory: history,
+        random: _ScriptedRandom([0.1]),
+      );
+
+      final selectedIds = session.items.map((item) => item.entry.id).toList();
+      expect(selectedIds, hasLength(15));
+      expect(selectedIds.toSet(), hasLength(15));
+      expect(selectedIds.first, 'often-missed');
+    },
+  );
+
+  test('includes all entries when there are 15 or fewer', () {
+    final entries = List.generate(
+      15,
+      (index) => sampleEntry(id: 'entry-$index'),
+    );
+    final session = PracticeSession.create(
+      entries,
+      practiceHistory: {
+        for (final entry in entries)
+          entry.id: const PracticeHistory(
+            completedAttempts: 100,
+            incorrectAttempts: 0,
+          ),
+      },
+      random: Random(19),
+    );
+
+    expect(session.items, hasLength(15));
+    expect(session.items.map((item) => item.entry.id).toSet(), {
+      for (final entry in entries) entry.id,
+    });
+  });
+
   test('does not repeat entries when input contains duplicate IDs', () {
     final first = sampleEntry(id: 'duplicate', german: 'das Haus');
     final duplicate = sampleEntry(id: 'duplicate', german: 'die Wohnung');
@@ -74,4 +157,23 @@ void main() {
     expect(session.summary.incorrect, 1);
     expect(session.summary.accuracyPercent, closeTo(66.6667, 0.001));
   });
+}
+
+class _ScriptedRandom implements Random {
+  _ScriptedRandom(this._draws);
+
+  final List<double> _draws;
+  var _drawIndex = 0;
+
+  @override
+  int nextInt(int max) => 0;
+
+  @override
+  bool nextBool() => false;
+
+  @override
+  double nextDouble() {
+    if (_drawIndex < _draws.length) return _draws[_drawIndex++];
+    return 0;
+  }
 }

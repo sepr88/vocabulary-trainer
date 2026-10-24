@@ -4,6 +4,32 @@ import '../models/vocabulary.dart';
 
 enum TranslationDirection { germanToPortuguese, portugueseToGerman }
 
+class PracticeHistory {
+  const PracticeHistory({
+    required this.completedAttempts,
+    required this.incorrectAttempts,
+  });
+
+  final int completedAttempts;
+  final int incorrectAttempts;
+
+  int get selectionWeight {
+    final attemptsRemaining = 3 - completedAttempts;
+    final practiceBonus = attemptsRemaining > 0 ? attemptsRemaining : 0;
+    final missBonus = incorrectAttempts < 3 ? incorrectAttempts : 3;
+    return 1 + practiceBonus + missBonus;
+  }
+
+  @override
+  bool operator ==(Object other) =>
+      other is PracticeHistory &&
+      other.completedAttempts == completedAttempts &&
+      other.incorrectAttempts == incorrectAttempts;
+
+  @override
+  int get hashCode => Object.hash(completedAttempts, incorrectAttempts);
+}
+
 class PracticeItem {
   const PracticeItem({
     required this.attemptId,
@@ -46,6 +72,7 @@ class PracticeSession {
 
   static PracticeSession create(
     List<VocabularyEntry> entries, {
+    Map<String, PracticeHistory> practiceHistory = const {},
     Random? random,
   }) {
     final randomizer = random ?? Random.secure();
@@ -53,8 +80,13 @@ class PracticeSession {
     for (final entry in entries) {
       distinctEntries.putIfAbsent(entry.id, () => entry);
     }
-    final shuffled = distinctEntries.values.toList()..shuffle(randomizer);
-    final selected = shuffled.take(15).toList(growable: false);
+    final selected = distinctEntries.length <= 15
+        ? (distinctEntries.values.toList()..shuffle(randomizer))
+        : _weightedSelection(
+            distinctEntries.values.toList(),
+            practiceHistory,
+            randomizer,
+          );
     final sessionId = List<int>.generate(
       16,
       (_) => randomizer.nextInt(256),
@@ -69,6 +101,45 @@ class PracticeSession {
       );
     }, growable: false);
     return PracticeSession._(items);
+  }
+
+  static List<VocabularyEntry> _weightedSelection(
+    List<VocabularyEntry> candidates,
+    Map<String, PracticeHistory> practiceHistory,
+    Random random,
+  ) {
+    final selected = <VocabularyEntry>[];
+    while (selected.length < 15) {
+      final totalWeight = candidates.fold<int>(
+        0,
+        (total, entry) =>
+            total +
+            (practiceHistory[entry.id] ??
+                    const PracticeHistory(
+                      completedAttempts: 0,
+                      incorrectAttempts: 0,
+                    ))
+                .selectionWeight,
+      );
+      final draw = random.nextDouble() * totalWeight;
+      var cumulativeWeight = 0;
+      var selectedIndex = -1;
+      for (var index = 0; index < candidates.length; index++) {
+        final history =
+            practiceHistory[candidates[index].id] ??
+            const PracticeHistory(completedAttempts: 0, incorrectAttempts: 0);
+        cumulativeWeight += history.selectionWeight;
+        if (draw < cumulativeWeight) {
+          selectedIndex = index;
+          break;
+        }
+      }
+      if (selectedIndex < 0) {
+        throw StateError('The weighted practice draw did not select an entry.');
+      }
+      selected.add(candidates.removeAt(selectedIndex));
+    }
+    return selected;
   }
 
   bool completeItem(int index, {required bool correct}) {

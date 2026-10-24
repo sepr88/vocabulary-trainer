@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vocabulary_trainer/data/trainer_store.dart';
+import 'package:vocabulary_trainer/domain/practice_session.dart';
 import 'package:vocabulary_trainer/main.dart';
 import 'package:vocabulary_trainer/models/vocabulary.dart';
 
@@ -53,6 +54,9 @@ class _DesignTestStore implements TrainerStore {
 
   @override
   Future<int> activeVocabularyVersion() async => 1;
+
+  @override
+  Future<Map<String, PracticeHistory>> practiceHistory() async => const {};
 
   @override
   Future<void> close() async {}

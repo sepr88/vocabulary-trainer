@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vocabulary_trainer/data/trainer_store.dart';
+import 'package:vocabulary_trainer/domain/practice_session.dart';
 import 'package:vocabulary_trainer/main.dart';
 import 'package:vocabulary_trainer/models/vocabulary.dart';
 
@@ -113,6 +114,21 @@ class _MemoryStore implements TrainerStore {
 
   @override
   Future<int> activeVocabularyVersion() async => vocabularyVersion;
+
+  @override
+  Future<Map<String, PracticeHistory>> practiceHistory() async => {
+    for (final entry in _recorded.values)
+      entry.entryId: PracticeHistory(
+        completedAttempts: _recorded.values
+            .where((attempt) => attempt.entryId == entry.entryId)
+            .length,
+        incorrectAttempts: _recorded.values
+            .where(
+              (attempt) => attempt.entryId == entry.entryId && !attempt.correct,
+            )
+            .length,
+      ),
+  };
 
   @override
   Future<void> close() async {}

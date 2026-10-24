@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:vocabulary_trainer/data/trainer_store.dart';
+import 'package:vocabulary_trainer/domain/practice_session.dart';
 
 import '../support/fixtures.dart';
 
@@ -28,6 +29,7 @@ void main() {
 
       expect(await store.activeEntries(), hasLength(1));
       expect(await store.activeVocabularyVersion(), 1);
+      expect(await store.practiceHistory(), isEmpty);
       expect(
         await store.recordAttempt(
           attemptId: 'session:0',
@@ -36,6 +38,12 @@ void main() {
         ),
         isTrue,
       );
+      expect(await store.practiceHistory(), {
+        'sample-1': const PracticeHistory(
+          completedAttempts: 1,
+          incorrectAttempts: 0,
+        ),
+      });
       expect(
         await store.recordAttempt(
           attemptId: 'session:0',
@@ -58,6 +66,12 @@ void main() {
       expect(progress.incorrectAnswers, 1);
       expect(progress.uniqueEntriesCorrect, 1);
       expect(progress.uniqueEntriesIncorrect, 1);
+      expect(await store.practiceHistory(), {
+        'sample-1': const PracticeHistory(
+          completedAttempts: 2,
+          incorrectAttempts: 1,
+        ),
+      });
       await store.close();
     },
   );
@@ -171,6 +185,12 @@ void main() {
       final progress = await store.progress();
       expect(progress.itemsPracticed, 1);
       expect(progress.correctAnswers, 1);
+      expect(await store.practiceHistory(), {
+        'sample-1': const PracticeHistory(
+          completedAttempts: 1,
+          incorrectAttempts: 0,
+        ),
+      });
       await store.close();
     } finally {
       await directory.delete(recursive: true);
