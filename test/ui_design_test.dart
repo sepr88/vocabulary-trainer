@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vocabulary_trainer/data/trainer_store.dart';
 import 'package:vocabulary_trainer/domain/practice_session.dart';
 import 'package:vocabulary_trainer/main.dart';
+import 'package:vocabulary_trainer/models/conjugation.dart';
 import 'package:vocabulary_trainer/models/vocabulary.dart';
 
 import 'support/fixtures.dart';
@@ -154,9 +155,24 @@ class _DesignTestStore implements TrainerStore {
   );
 
   @override
+  Future<List<ConjugationEntry>> activeConjugations() async => const [];
+
+  @override
+  Future<Map<ConjugationProgressKey, ConjugationProgress>>
+  conjugationProgress() async => const {};
+
+  @override
   Future<bool> recordAttempt({
     required String attemptId,
     required String entryId,
+    required bool correct,
+  }) async => true;
+
+  @override
+  Future<bool> recordConjugationAttempt({
+    required String attemptId,
+    required String conjugationId,
+    required String subjectId,
     required bool correct,
   }) async => true;
 

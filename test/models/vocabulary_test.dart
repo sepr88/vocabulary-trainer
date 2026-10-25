@@ -1,5 +1,6 @@
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vocabulary_trainer/models/conjugation.dart';
 import 'package:vocabulary_trainer/models/vocabulary.dart';
 
 void main() {
@@ -11,8 +12,44 @@ void main() {
       final source = await rootBundle.loadString('assets/vocabulary.json');
       final dataset = VocabularyDataset.fromJsonString(source);
 
-      expect(dataset.version, 4);
+      expect(dataset.version, 5);
       expect(dataset.entries, hasLength(100));
+      expect(dataset.conjugations, hasLength(40));
+      for (final language in ConjugationLanguage.values) {
+        for (final level in ProficiencyLevel.values) {
+          expect(
+            dataset.conjugations
+                .where(
+                  (entry) => entry.language == language && entry.level == level,
+                )
+                .length,
+            10,
+          );
+        }
+      }
+      final portugueseSer = dataset.conjugations.singleWhere(
+        (entry) => entry.id == 'pt-PT-beginner-ser',
+      );
+      expect(portugueseSer.subjects.map((subject) => subject.id), [
+        'eu',
+        'tu',
+        'ele/ela/você',
+        'nós',
+        'vocês/eles/elas',
+      ]);
+      expect(
+        portugueseSer.subjects
+            .singleWhere((subject) => subject.id == 'tu')
+            .primary,
+        'és',
+      );
+      expect(
+        dataset.conjugations
+            .singleWhere((entry) => entry.id == 'de-beginner-sein')
+            .subjects
+            .map((subject) => subject.id),
+        ['ich', 'du', 'er/sie/es', 'wir', 'ihr', 'sie/Sie'],
+      );
       expect(dataset.entries.map((entry) => entry.id).toSet(), hasLength(100));
       final door = dataset.entries.singleWhere((entry) => entry.id == 'de-004');
       expect(door.germanExample, 'Die Tür ist offen.');
@@ -52,7 +89,7 @@ void main() {
   });
 
   test('rejects a non-positive version', () {
-    const source = '{"version":0,"entries":[]}';
+    const source = '{"version":0,"entries":[],"conjugations":[]}';
 
     expect(
       () => VocabularyDataset.fromJsonString(source),
@@ -71,8 +108,9 @@ void main() {
       }
     ''';
     expect(
-      () =>
-          VocabularyDataset.fromJsonString('{"version":1,"entries":[$entry]}'),
+      () => VocabularyDataset.fromJsonString(
+        '{"version":1,"entries":[$entry],"conjugations":[]}',
+      ),
       throwsFormatException,
     );
 
@@ -87,7 +125,7 @@ void main() {
     ''';
     expect(
       () => VocabularyDataset.fromJsonString(
-        '{"version":1,"entries":[$validEntry,$validEntry]}',
+        '{"version":1,"entries":[$validEntry,$validEntry],"conjugations":[]}',
       ),
       throwsFormatException,
     );
@@ -99,7 +137,7 @@ void main() {
         '"pt-PT":{"primary":"casa","accepted":["casa"]}}';
     expect(
       () => VocabularyDataset.fromJsonString(
-        '{"version":1,"entries":[$missingExample]}',
+        '{"version":1,"entries":[$missingExample],"conjugations":[]}',
       ),
       throwsFormatException,
     );
@@ -118,7 +156,46 @@ void main() {
     ''';
     expect(
       () => VocabularyDataset.fromJsonString(
-        '{"version":1,"entries":[$longExample]}',
+        '{"version":1,"entries":[$longExample],"conjugations":[]}',
+      ),
+      throwsFormatException,
+    );
+  });
+
+  test('validates conjugation subject IDs and tense', () {
+    const duplicateSubjects = '''
+      {
+        "id":"de-beginner-test",
+        "language":"de",
+        "level":"beginner",
+        "infinitive":"sein",
+        "tense":"presentIndicative",
+        "subjects":[
+          {"id":"ich","primary":"bin","accepted":["bin"]},
+          {"id":"ich","primary":"bin","accepted":["bin"]}
+        ]
+      }
+    ''';
+    expect(
+      () => VocabularyDataset.fromJsonString(
+        '{"version":1,"entries":[],"conjugations":[$duplicateSubjects]}',
+      ),
+      throwsFormatException,
+    );
+
+    const invalidTense = '''
+      {
+        "id":"de-beginner-test",
+        "language":"de",
+        "level":"beginner",
+        "infinitive":"sein",
+        "tense":"past",
+        "subjects":[{"id":"ich","primary":"bin","accepted":["bin"]}]
+      }
+    ''';
+    expect(
+      () => VocabularyDataset.fromJsonString(
+        '{"version":1,"entries":[],"conjugations":[$invalidTense]}',
       ),
       throwsFormatException,
     );

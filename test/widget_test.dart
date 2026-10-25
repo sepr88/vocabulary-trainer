@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vocabulary_trainer/data/trainer_store.dart';
 import 'package:vocabulary_trainer/domain/practice_session.dart';
 import 'package:vocabulary_trainer/main.dart';
+import 'package:vocabulary_trainer/models/conjugation.dart';
 import 'package:vocabulary_trainer/models/vocabulary.dart';
 
 import 'support/fixtures.dart';
@@ -109,17 +110,149 @@ void main() {
     );
     expect(button.onPressed, isNull);
   });
+
+  testWidgets('runs a separate conjugation session and updates its progress', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(393, 851);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final store = _MemoryStore(
+      [sampleEntry()],
+      conjugations: [sampleConjugation()],
+    );
+    await tester.pumpWidget(MyApp(storeLoader: () async => store));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Practice conjugation'), findsOneWidget);
+    await tester.tap(find.text('Practice conjugation'));
+    await tester.pumpAndSettle();
+    expect(find.text('Choose your practice'), findsOneWidget);
+    await tester.tap(find.text('Start session (2 prompts)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Prompt 1 of 2'), findsOneWidget);
+    expect(find.text('sein'), findsOneWidget);
+
+    final subject = storeAnswerFor(tester);
+    await tester.enterText(
+      find.byKey(const ValueKey('conjugation-answer')),
+      subject,
+    );
+    await tester.testTextInput.receiveAction(TextInputAction.done);
+    await tester.pumpAndSettle();
+    expect(find.text('Correct'), findsOneWidget);
+
+    await tester.tap(find.text('Next'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Reveal answer'));
+    await tester.pumpAndSettle();
+    expect(find.text('Marked incorrect'), findsOneWidget);
+    await tester.tap(find.text('Finish session'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Conjugation session complete'), findsOneWidget);
+    expect(find.text('Prompts practiced'), findsOneWidget);
+    expect(find.text('50%'), findsOneWidget);
+    expect(store.conjugationAttempts, [true, false]);
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+    expect(find.text('Items practiced'), findsOneWidget);
+    expect(find.text('1'), findsOneWidget);
+  });
+
+  testWidgets(
+    'opens only the selected language reference and returns to the active prompt',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(393, 851);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final portugueseEntry = sampleConjugation(
+        id: 'pt-PT-beginner-ser',
+        language: ConjugationLanguage.portuguese,
+        infinitive: 'ser',
+        subjects: const [
+          ConjugationSubject(id: 'eu', primary: 'sou', accepted: ['sou']),
+          ConjugationSubject(id: 'tu', primary: 'és', accepted: ['és']),
+        ],
+      );
+      final store = _MemoryStore(
+        [sampleEntry()],
+        conjugations: [portugueseEntry],
+      );
+      await tester.pumpWidget(MyApp(storeLoader: () async => store));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Practice conjugation'));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Grammar reference'), findsNothing);
+      await tester.tap(find.text('European Portuguese'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Start session (2 prompts)'));
+      await tester.pumpAndSettle();
+
+      final promptFinder = find.byKey(
+        const ValueKey('conjugation-prompt-infinitive'),
+      );
+      final promptBeforeHelp = tester.widget<Text>(promptFinder);
+      expect(find.text('Prompt 1 of 2'), findsOneWidget);
+      expect(find.byTooltip('Grammar reference'), findsOneWidget);
+      await tester.tap(find.byTooltip('Grammar reference'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('European Portuguese grammar'), findsOneWidget);
+      expect(find.text('Regular conjugation'), findsOneWidget);
+      expect(find.text('falar'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('ser'),
+        200,
+        scrollable: find.descendant(
+          of: find.byKey(const ValueKey('grammar-reference-content')),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      expect(find.text('ser'), findsOneWidget);
+      expect(find.text('German grammar'), findsNothing);
+      expect(find.text('machen'), findsNothing);
+
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.text('Prompt 1 of 2'), findsOneWidget);
+      expect(tester.widget<Text>(promptFinder).data, promptBeforeHelp.data);
+      expect(find.byTooltip('Grammar reference'), findsOneWidget);
+      expect(find.byKey(const ValueKey('conjugation-answer')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+}
+
+String storeAnswerFor(WidgetTester tester) {
+  if (find.text('ich').evaluate().isNotEmpty) return 'bin';
+  if (find.text('du').evaluate().isNotEmpty) return 'bist';
+  throw StateError('No supported subject prompt was displayed.');
 }
 
 class _MemoryStore implements TrainerStore {
-  _MemoryStore(this.entries, {this.vocabularyVersion = 1});
+  _MemoryStore(
+    this.entries, {
+    this.vocabularyVersion = 1,
+    this.conjugations = const [],
+  });
 
   final List<VocabularyEntry> entries;
   final int vocabularyVersion;
+  final List<ConjugationEntry> conjugations;
   final Map<String, ({String entryId, bool correct})> _recorded = {};
+  final Map<String, ({String conjugationId, String subjectId, bool correct})>
+  _conjugationRecorded = {};
 
   List<bool> get attempts =>
       _recorded.values.map((attempt) => attempt.correct).toList();
+  List<bool> get conjugationAttempts =>
+      _conjugationRecorded.values.map((attempt) => attempt.correct).toList();
 
   @override
   Future<List<VocabularyEntry>> activeEntries() async => entries;
@@ -173,6 +306,48 @@ class _MemoryStore implements TrainerStore {
   }
 
   @override
+  Future<List<ConjugationEntry>> activeConjugations() async => conjugations;
+
+  @override
+  Future<Map<ConjugationProgressKey, ConjugationProgress>>
+  conjugationProgress() async {
+    final result = <ConjugationProgressKey, ConjugationProgress>{};
+    for (final language in ConjugationLanguage.values) {
+      for (final level in ProficiencyLevel.values) {
+        final matching = _conjugationRecorded.values.where((attempt) {
+          final entry = conjugations.firstWhere(
+            (entry) => entry.id == attempt.conjugationId,
+          );
+          return entry.language == language && entry.level == level;
+        }).toList();
+        final unique = <String, Set<bool>>{};
+        for (final attempt in matching) {
+          unique
+              .putIfAbsent(
+                '${attempt.conjugationId}:${attempt.subjectId}',
+                () => <bool>{},
+              )
+              .add(attempt.correct);
+        }
+        result[ConjugationProgressKey(language, level)] = ConjugationProgress(
+          promptsPracticed: matching.length,
+          correctAnswers: matching.where((attempt) => attempt.correct).length,
+          incorrectAnswers: matching
+              .where((attempt) => !attempt.correct)
+              .length,
+          uniquePromptsCorrect: unique.values
+              .where((results) => results.contains(true))
+              .length,
+          uniquePromptsIncorrect: unique.values
+              .where((results) => results.contains(false))
+              .length,
+        );
+      }
+    }
+    return result;
+  }
+
+  @override
   Future<bool> recordAttempt({
     required String attemptId,
     required String entryId,
@@ -180,6 +355,22 @@ class _MemoryStore implements TrainerStore {
   }) async {
     if (_recorded.containsKey(attemptId)) return false;
     _recorded[attemptId] = (entryId: entryId, correct: correct);
+    return true;
+  }
+
+  @override
+  Future<bool> recordConjugationAttempt({
+    required String attemptId,
+    required String conjugationId,
+    required String subjectId,
+    required bool correct,
+  }) async {
+    if (_conjugationRecorded.containsKey(attemptId)) return false;
+    _conjugationRecorded[attemptId] = (
+      conjugationId: conjugationId,
+      subjectId: subjectId,
+      correct: correct,
+    );
     return true;
   }
 

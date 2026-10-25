@@ -4,7 +4,43 @@ import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
 import '../domain/practice_session.dart';
+import '../models/conjugation.dart';
 import '../models/vocabulary.dart';
+
+class ConjugationProgressKey {
+  const ConjugationProgressKey(this.language, this.level);
+
+  final ConjugationLanguage language;
+  final ProficiencyLevel level;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ConjugationProgressKey &&
+      other.language == language &&
+      other.level == level;
+
+  @override
+  int get hashCode => Object.hash(language, level);
+}
+
+class ConjugationProgress {
+  const ConjugationProgress({
+    required this.promptsPracticed,
+    required this.correctAnswers,
+    required this.incorrectAnswers,
+    required this.uniquePromptsCorrect,
+    required this.uniquePromptsIncorrect,
+  });
+
+  final int promptsPracticed;
+  final int correctAnswers;
+  final int incorrectAnswers;
+  final int uniquePromptsCorrect;
+  final int uniquePromptsIncorrect;
+
+  double get accuracyPercent =>
+      promptsPracticed == 0 ? 0 : correctAnswers * 100 / promptsPracticed;
+}
 
 class ProgressSnapshot {
   const ProgressSnapshot({
@@ -30,9 +66,18 @@ abstract interface class TrainerStore {
   Future<List<VocabularyEntry>> activeEntries();
   Future<Map<String, PracticeHistory>> practiceHistory();
   Future<ProgressSnapshot> progress();
+  Future<List<ConjugationEntry>> activeConjugations();
+  Future<Map<ConjugationProgressKey, ConjugationProgress>>
+  conjugationProgress();
   Future<bool> recordAttempt({
     required String attemptId,
     required String entryId,
+    required bool correct,
+  });
+  Future<bool> recordConjugationAttempt({
+    required String attemptId,
+    required String conjugationId,
+    required String subjectId,
     required bool correct,
   });
   Future<void> close();
@@ -47,7 +92,7 @@ class SqliteTrainerStore implements TrainerStore {
     final directory = await getDatabasesPath();
     final database = await openDatabase(
       p.join(directory, 'vocabulary_trainer.db'),
-      version: 2,
+      version: 3,
       onCreate: (db, version) => createTables(db),
       onUpgrade: (db, oldVersion, newVersion) =>
           upgradeTables(db, oldVersion, newVersion),
@@ -83,6 +128,7 @@ class SqliteTrainerStore implements TrainerStore {
         value TEXT NOT NULL
       )
     ''');
+    await _createConjugationTables(database);
   }
 
   static Future<void> upgradeTables(
@@ -98,6 +144,36 @@ class SqliteTrainerStore implements TrainerStore {
         "ALTER TABLE vocabulary_entries ADD COLUMN pt_example TEXT NOT NULL DEFAULT ''",
       );
     }
+    if (oldVersion < 3 && newVersion >= 3) {
+      await _createConjugationTables(database);
+    }
+  }
+
+  static Future<void> _createConjugationTables(
+    DatabaseExecutor database,
+  ) async {
+    await database.execute('''
+      CREATE TABLE conjugations (
+        id TEXT PRIMARY KEY,
+        language TEXT NOT NULL,
+        level TEXT NOT NULL,
+        infinitive TEXT NOT NULL,
+        tense TEXT NOT NULL,
+        subjects TEXT NOT NULL,
+        active INTEGER NOT NULL
+      )
+    ''');
+    await database.execute('''
+      CREATE TABLE conjugation_attempts (
+        attempt_id TEXT PRIMARY KEY,
+        conjugation_id TEXT NOT NULL,
+        subject_id TEXT NOT NULL,
+        language TEXT NOT NULL,
+        level TEXT NOT NULL,
+        correct INTEGER NOT NULL,
+        completed_at INTEGER NOT NULL
+      )
+    ''');
   }
 
   @override
@@ -126,6 +202,21 @@ class SqliteTrainerStore implements TrainerStore {
         );
         await transaction.update(
           'vocabulary_entries',
+          values,
+          where: 'id = ?',
+          whereArgs: [entry.id],
+        );
+      }
+      await transaction.update('conjugations', {'active': 0});
+      for (final entry in dataset.conjugations) {
+        final values = _conjugationValues(entry)..['active'] = 1;
+        await transaction.insert(
+          'conjugations',
+          values,
+          conflictAlgorithm: ConflictAlgorithm.ignore,
+        );
+        await transaction.update(
+          'conjugations',
           values,
           where: 'id = ?',
           whereArgs: [entry.id],
@@ -224,6 +315,82 @@ class SqliteTrainerStore implements TrainerStore {
   }
 
   @override
+  Future<List<ConjugationEntry>> activeConjugations() async {
+    final rows = await _database.query(
+      'conjugations',
+      where: 'active = 1',
+      orderBy: 'id',
+    );
+    return List.unmodifiable(rows.map(_conjugationFromRow));
+  }
+
+  @override
+  Future<Map<ConjugationProgressKey, ConjugationProgress>>
+  conjugationProgress() async {
+    final values = <ConjugationProgressKey, _MutableConjugationProgress>{
+      for (final language in ConjugationLanguage.values)
+        for (final level in ProficiencyLevel.values)
+          ConjugationProgressKey(language, level):
+              _MutableConjugationProgress(),
+    };
+    final uniquePrompts =
+        <ConjugationProgressKey, Map<(String, String), Set<bool>>>{};
+    final rows = await _database.query(
+      'conjugation_attempts',
+      columns: const [
+        'conjugation_id',
+        'subject_id',
+        'language',
+        'level',
+        'correct',
+      ],
+    );
+    for (final row in rows) {
+      final key = ConjugationProgressKey(
+        ConjugationLanguage.fromId(row['language']! as String, 'language'),
+        ProficiencyLevel.values.byName(row['level']! as String),
+      );
+      final progress = values[key];
+      if (progress == null) {
+        throw StateError('Stored conjugation progress has an invalid group.');
+      }
+      final correct = row['correct']! as int == 1;
+      progress.promptsPracticed++;
+      if (correct) {
+        progress.correctAnswers++;
+      } else {
+        progress.incorrectAnswers++;
+      }
+      final promptId = (
+        row['conjugation_id']! as String,
+        row['subject_id']! as String,
+      );
+      uniquePrompts
+          .putIfAbsent(key, () => {})
+          .putIfAbsent(promptId, () => <bool>{})
+          .add(correct);
+    }
+    return Map.unmodifiable({
+      for (final entry in values.entries)
+        entry.key: ConjugationProgress(
+          promptsPracticed: entry.value.promptsPracticed,
+          correctAnswers: entry.value.correctAnswers,
+          incorrectAnswers: entry.value.incorrectAnswers,
+          uniquePromptsCorrect:
+              uniquePrompts[entry.key]?.values
+                  .where((results) => results.contains(true))
+                  .length ??
+              0,
+          uniquePromptsIncorrect:
+              uniquePrompts[entry.key]?.values
+                  .where((results) => results.contains(false))
+                  .length ??
+              0,
+        ),
+    });
+  }
+
+  @override
   Future<bool> recordAttempt({
     required String attemptId,
     required String entryId,
@@ -261,6 +428,55 @@ class SqliteTrainerStore implements TrainerStore {
   }
 
   @override
+  Future<bool> recordConjugationAttempt({
+    required String attemptId,
+    required String conjugationId,
+    required String subjectId,
+    required bool correct,
+  }) async {
+    return _database.transaction((transaction) async {
+      final existing = await transaction.query(
+        'conjugation_attempts',
+        columns: const ['attempt_id'],
+        where: 'attempt_id = ?',
+        whereArgs: [attemptId],
+        limit: 1,
+      );
+      if (existing.isNotEmpty) return false;
+      final conjugations = await transaction.query(
+        'conjugations',
+        columns: const ['language', 'level', 'subjects'],
+        where: 'id = ? AND active = 1',
+        whereArgs: [conjugationId],
+        limit: 1,
+      );
+      if (conjugations.isEmpty) {
+        throw StateError(
+          'Cannot record an attempt for inactive conjugation $conjugationId.',
+        );
+      }
+      final subjects = decodeConjugationSubjects(
+        conjugations.single['subjects']! as String,
+      );
+      if (!subjects.any((subject) => subject.id == subjectId)) {
+        throw StateError(
+          'Cannot record an attempt for unknown subject $subjectId.',
+        );
+      }
+      await transaction.insert('conjugation_attempts', {
+        'attempt_id': attemptId,
+        'conjugation_id': conjugationId,
+        'subject_id': subjectId,
+        'language': conjugations.single['language']! as String,
+        'level': conjugations.single['level']! as String,
+        'correct': correct ? 1 : 0,
+        'completed_at': DateTime.now().millisecondsSinceEpoch,
+      });
+      return true;
+    });
+  }
+
+  @override
   Future<void> close() => _database.close();
 
   static Map<String, Object?> _entryValues(VocabularyEntry entry) => {
@@ -274,6 +490,29 @@ class SqliteTrainerStore implements TrainerStore {
     'pt_example': entry.portugueseExample,
     'active': 1,
   };
+
+  static Map<String, Object?> _conjugationValues(ConjugationEntry entry) => {
+    'id': entry.id,
+    'language': entry.language.id,
+    'level': entry.level.name,
+    'infinitive': entry.infinitive,
+    'tense': entry.tense,
+    'subjects': encodeConjugationSubjects(entry.subjects),
+    'active': 1,
+  };
+
+  static ConjugationEntry _conjugationFromRow(Map<String, Object?> row) =>
+      ConjugationEntry(
+        id: row['id']! as String,
+        language: ConjugationLanguage.fromId(
+          row['language']! as String,
+          'language',
+        ),
+        level: ProficiencyLevel.values.byName(row['level']! as String),
+        infinitive: row['infinitive']! as String,
+        tense: row['tense']! as String,
+        subjects: decodeConjugationSubjects(row['subjects']! as String),
+      );
 
   static VocabularyEntry _entryFromRow(Map<String, Object?> row) {
     return VocabularyEntry(
@@ -297,4 +536,10 @@ class SqliteTrainerStore implements TrainerStore {
       portugueseExample: row['pt_example']! as String,
     );
   }
+}
+
+class _MutableConjugationProgress {
+  int promptsPracticed = 0;
+  int correctAnswers = 0;
+  int incorrectAnswers = 0;
 }

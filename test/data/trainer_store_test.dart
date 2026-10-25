@@ -5,6 +5,8 @@ import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:vocabulary_trainer/data/trainer_store.dart';
 import 'package:vocabulary_trainer/domain/practice_session.dart';
+import 'package:vocabulary_trainer/models/conjugation.dart';
+import 'package:vocabulary_trainer/models/vocabulary.dart';
 
 import '../support/fixtures.dart';
 
@@ -72,6 +74,105 @@ void main() {
           incorrectAttempts: 1,
         ),
       });
+      await store.close();
+    },
+  );
+
+  test('stores conjugation attempts separately and preserves them on reconciliation', () async {
+    final opened = await openMemoryStore();
+    final store = opened.store;
+    final conjugation = sampleConjugation();
+    await store.reconcile(sampleDataset(conjugations: [conjugation]));
+
+    final activeConjugation = (await store.activeConjugations()).single;
+    expect(activeConjugation.id, conjugation.id);
+    expect(activeConjugation.infinitive, conjugation.infinitive);
+    expect(
+      activeConjugation.subjects.map((subject) => subject.id),
+      conjugation.subjects.map((subject) => subject.id),
+    );
+    expect(
+      await store.recordConjugationAttempt(
+        attemptId: 'conjugation-session:0',
+        conjugationId: conjugation.id,
+        subjectId: 'ich',
+        correct: true,
+      ),
+      isTrue,
+    );
+    expect(
+      await store.recordConjugationAttempt(
+        attemptId: 'conjugation-session:0',
+        conjugationId: conjugation.id,
+        subjectId: 'ich',
+        correct: false,
+      ),
+      isFalse,
+    );
+    expect((await store.progress()).itemsPracticed, 0);
+    final group =
+        (await store.conjugationProgress())[const ConjugationProgressKey(
+          ConjugationLanguage.german,
+          ProficiencyLevel.beginner,
+        )]!;
+    expect(group.promptsPracticed, 1);
+    expect(group.correctAnswers, 1);
+    expect(group.incorrectAnswers, 0);
+    expect(group.uniquePromptsCorrect, 1);
+    expect(group.accuracyPercent, 100);
+
+    await store.reconcile(
+      sampleDataset(
+        version: 2,
+        conjugations: [
+          sampleConjugation(infinitive: 'sein'),
+          sampleConjugation(id: 'de-beginner-haben', infinitive: 'haben'),
+        ],
+      ),
+    );
+    expect(
+      (await store.conjugationProgress())[const ConjugationProgressKey(
+            ConjugationLanguage.german,
+            ProficiencyLevel.beginner,
+          )]!
+          .promptsPracticed,
+      1,
+    );
+    expect(await store.activeConjugations(), hasLength(2));
+    await store.close();
+  });
+
+  test(
+    'conjugation progress keeps correctness history per unique prompt',
+    () async {
+      final opened = await openMemoryStore();
+      final store = opened.store;
+      final conjugation = sampleConjugation();
+      await store.reconcile(sampleDataset(conjugations: [conjugation]));
+      await store.recordConjugationAttempt(
+        attemptId: 'attempt-1',
+        conjugationId: conjugation.id,
+        subjectId: 'ich',
+        correct: true,
+      );
+      await store.recordConjugationAttempt(
+        attemptId: 'attempt-2',
+        conjugationId: conjugation.id,
+        subjectId: 'ich',
+        correct: false,
+      );
+
+      final progress =
+          (await store.conjugationProgress())[const ConjugationProgressKey(
+            ConjugationLanguage.german,
+            ProficiencyLevel.beginner,
+          )]!;
+      expect(progress.promptsPracticed, 2);
+      expect(progress.correctAnswers, 1);
+      expect(progress.incorrectAnswers, 1);
+      expect(progress.uniquePromptsCorrect, 1);
+      expect(progress.uniquePromptsIncorrect, 1);
+      expect(progress.accuracyPercent, 50);
       await store.close();
     },
   );
@@ -230,7 +331,7 @@ void main() {
         'value': '3',
       });
 
-      await SqliteTrainerStore.upgradeTables(database, 1, 2);
+      await SqliteTrainerStore.upgradeTables(database, 1, 3);
       final store = SqliteTrainerStore(database);
       await store.reconcile(sampleDataset(version: 4));
 

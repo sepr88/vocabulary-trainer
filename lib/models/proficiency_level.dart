@@ -1,0 +1,1 @@
+enum ProficiencyLevel { beginner, advanced }
