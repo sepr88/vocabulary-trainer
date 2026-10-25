@@ -62,9 +62,10 @@ Keep the experience simple, intuitive, fast to start, focused, consistent, acces
 - **OPD-002:** Should the app include a conjugation trainer? If so, which languages, tenses, and proficiency levels should it support?
 - **OPD-003:** Should users be able to reset their training history and progress? If so, what confirmation or recovery safeguards should apply?
 - **OPD-005:** Should users be able to review words they answered incorrectly? If so, how should that review relate to regular practice sessions?
-- **OPD-006:** Should users be able to browse or practice vocabulary grouped by topics such as travel, food, or work?
+- **OPD-006:** Should vocabulary entries be grouped into topics such as food, travel, and hotels, and should users be able to choose a topic for a practice session?
 - **OPD-007:** Should the app include learning goals, achievements, or both?
 - **OPD-008:** Should the app send reminders to encourage users to practice? If so, when and how often?
 - **OPD-009:** Should users be able to record their pronunciation and compare it with a prerecorded reference?
 - **OPD-010:** Should the app identify potential false friends—words that look or sound similar but differ in meaning—and when should it show that information?
 - **OPD-011:** Should the app include fill-in-the-blank practice?
+- **OPD-012:** Should the app include an adaptive vocabulary coach that tracks recall accuracy and repeated mistakes, adjusts review intervals for each word, and prioritizes words predicted to be nearly forgotten? If so, which exercises should it schedule, and when?
