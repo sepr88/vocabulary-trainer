@@ -79,6 +79,10 @@ String _bundle(int count) => jsonEncode({
           'primary': 'casa $index',
           'accepted': ['casa $index'],
         },
+        'examples': {
+          'de': 'Das Haus ist wichtig.',
+          'pt-PT': 'A casa é importante.',
+        },
       },
   ],
 });

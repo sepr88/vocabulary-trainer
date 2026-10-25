@@ -7,6 +7,28 @@ import '../support/fixtures.dart';
 
 void main() {
   group('PracticeItem', () {
+    test('selects paired example sentences for each translation direction', () {
+      final entry = sampleEntry();
+      final germanToPortuguese = PracticeItem(
+        attemptId: 'session:0',
+        entry: entry,
+        direction: TranslationDirection.germanToPortuguese,
+      );
+      final portugueseToGerman = PracticeItem(
+        attemptId: 'session:1',
+        entry: entry,
+        direction: TranslationDirection.portugueseToGerman,
+      );
+
+      expect(germanToPortuguese.exampleSentence, entry.germanExample);
+      expect(
+        germanToPortuguese.translatedExampleSentence,
+        entry.portugueseExample,
+      );
+      expect(portugueseToGerman.exampleSentence, entry.portugueseExample);
+      expect(portugueseToGerman.translatedExampleSentence, entry.germanExample);
+    });
+
     test('matches case-insensitively and ignores outer whitespace', () {
       final session = PracticeSession.create([
         sampleEntry(),

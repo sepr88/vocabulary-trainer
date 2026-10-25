@@ -22,6 +22,12 @@ void main() {
         .text('German → European Portuguese')
         .evaluate()
         .isNotEmpty;
+    expect(
+      find.text(
+        germanToPortuguese ? 'Das Haus ist wichtig.' : 'A casa é importante.',
+      ),
+      findsOneWidget,
+    );
     final answer = germanToPortuguese ? 'a casa' : 'das Haus';
     await tester.enterText(
       find.byKey(const ValueKey('practice-answer')),
@@ -48,6 +54,12 @@ void main() {
 
     expect(find.text('Correct'), findsOneWidget);
     expect(find.text(germanToPortuguese ? 'a casa' : 'das Haus'), findsWidgets);
+    expect(
+      find.text(
+        germanToPortuguese ? 'A casa é importante.' : 'Das Haus ist wichtig.',
+      ),
+      findsOneWidget,
+    );
     expect(store.attempts, [true]);
 
     await tester.tap(find.text('Finish session'));

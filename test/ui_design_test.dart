@@ -42,6 +42,63 @@ void main() {
     expect(find.text('Your translation'), findsOneWidget);
     expect(find.text('Reveal answer'), findsOneWidget);
   });
+
+  testWidgets(
+    'practice content and actions fit a Pixel 5-sized portrait screen',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(393, 851);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final store = _DesignTestStore([sampleEntry()]);
+      await tester.pumpWidget(MyApp(storeLoader: () async => store));
+      await tester.pumpAndSettle();
+      expect(tester.takeException(), isNull);
+      await tester.tap(find.text('Start practice'));
+      await tester.pumpAndSettle();
+
+      final germanToPortuguese = find
+          .text('German → European Portuguese')
+          .evaluate()
+          .isNotEmpty;
+      final sourceSentence = tester.widget<Text>(
+        find.text(
+          germanToPortuguese ? 'Das Haus ist wichtig.' : 'A casa é importante.',
+        ),
+      );
+      expect(sourceSentence.style?.fontSize, greaterThanOrEqualTo(16));
+      expect(find.text('Check answer'), findsOneWidget);
+      expect(find.text('Reveal answer'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      expect(
+        tester
+            .state<ScrollableState>(find.byType(Scrollable).last)
+            .position
+            .maxScrollExtent,
+        0,
+      );
+
+      await tester.tap(find.text('Reveal answer'));
+      await tester.pumpAndSettle();
+      final translatedSentence = tester.widget<Text>(
+        find.text(
+          germanToPortuguese ? 'A casa é importante.' : 'Das Haus ist wichtig.',
+        ),
+      );
+      expect(translatedSentence.style?.fontSize, greaterThanOrEqualTo(16));
+      expect(find.text('Marked incorrect'), findsOneWidget);
+      expect(find.text('Finish session'), findsOneWidget);
+      expect(tester.takeException(), isNull);
+      expect(
+        tester
+            .state<ScrollableState>(find.byType(Scrollable).last)
+            .position
+            .maxScrollExtent,
+        0,
+      );
+    },
+  );
 }
 
 class _DesignTestStore implements TrainerStore {

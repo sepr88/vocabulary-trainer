@@ -46,6 +46,16 @@ class PracticeItem {
     TranslationDirection.portugueseToGerman => entry.portuguese.primary,
   };
 
+  String get exampleSentence => switch (direction) {
+    TranslationDirection.germanToPortuguese => entry.germanExample,
+    TranslationDirection.portugueseToGerman => entry.portugueseExample,
+  };
+
+  String get translatedExampleSentence => switch (direction) {
+    TranslationDirection.germanToPortuguese => entry.portugueseExample,
+    TranslationDirection.portugueseToGerman => entry.germanExample,
+  };
+
   String get primaryTranslation => switch (direction) {
     TranslationDirection.germanToPortuguese => entry.portuguese.primary,
     TranslationDirection.portugueseToGerman => entry.german.primary,

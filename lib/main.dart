@@ -667,11 +667,11 @@ class _PracticeScreenState extends State<PracticeScreen> {
               Text(
                 '${((questionNumber / questionCount) * 100).round()}%',
                 style: Theme.of(context).textTheme.bodyMedium
-                    ?.copyWith(fontWeight: FontWeight.w700),
+                    ?.copyWith(fontSize: 16, fontWeight: FontWeight.w700),
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           ClipRRect(
             borderRadius: BorderRadius.circular(8),
             child: Semantics(
@@ -684,7 +684,7 @@ class _PracticeScreenState extends State<PracticeScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
           Align(
             alignment: Alignment.centerLeft,
             child: Container(
@@ -702,25 +702,28 @@ class _PracticeScreenState extends State<PracticeScreen> {
                     color: colorScheme.primary,
                   ),
                   const SizedBox(width: 7),
-                  Text(
-                    directionLabel,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: colorScheme.onSurface,
-                      fontWeight: FontWeight.w700,
+                  Flexible(
+                    child: Text(
+                      directionLabel,
+                      style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: colorScheme.onSurface,
+                        fontSize: 16,
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
                   ),
                 ],
               ),
             ),
           ),
-          const SizedBox(height: 18),
+          const SizedBox(height: 12),
           Card(
             color: colorScheme.primaryContainer,
             child: Padding(
-              padding: const EdgeInsets.all(20),
+              padding: const EdgeInsets.all(14),
               child: Center(
                 child: ConstrainedBox(
-                  constraints: const BoxConstraints(minHeight: 110),
+                  constraints: const BoxConstraints(minHeight: 80),
                   child: Center(
                     child: Text(
                       _item.prompt,
@@ -736,26 +739,51 @@ class _PracticeScreenState extends State<PracticeScreen> {
               ),
             ),
           ),
-          const SizedBox(height: 24),
-          TextField(
-            key: const ValueKey('practice-answer'),
-            controller: _answerController,
-            enabled: !_completed && !_saving,
-            onChanged: (_) => setState(() {}),
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) {
-              if (_answerController.text.trim().isNotEmpty) {
-                _complete(_item.matches(_answerController.text));
-              }
-            },
-            decoration: const InputDecoration(
-              labelText: 'Your translation',
-              hintText: 'Type your answer',
-              prefixIcon: Icon(Icons.edit_rounded),
-            ),
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
           if (!_completed) ...[
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(color: const Color(0xffedf0e7)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Example',
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    _item.exampleSentence,
+                    style: Theme.of(context).textTheme.bodyLarge,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 10),
+          ],
+          if (!_completed) ...[
+            TextField(
+              key: const ValueKey('practice-answer'),
+              controller: _answerController,
+              enabled: !_completed && !_saving,
+              onChanged: (_) => setState(() {}),
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) {
+                if (_answerController.text.trim().isNotEmpty) {
+                  _complete(_item.matches(_answerController.text));
+                }
+              },
+              decoration: const InputDecoration(
+                labelText: 'Your translation',
+                hintText: 'Type your answer',
+                prefixIcon: Icon(Icons.edit_rounded),
+              ),
+            ),
+            const SizedBox(height: 10),
             SizedBox(
               width: double.infinity,
               child: FilledButton.icon(
@@ -817,6 +845,11 @@ class _PracticeScreenState extends State<PracticeScreen> {
                             style: Theme.of(context).textTheme.titleMedium
                                 ?.copyWith(fontSize: 20),
                           ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _item.translatedExampleSentence,
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
                         ],
                       ),
                     ),
@@ -846,7 +879,10 @@ class _PracticeScreenState extends State<PracticeScreen> {
               ),
               child: Text(
                 'Could not save this result: $_saveError',
-                style: TextStyle(color: colorScheme.onErrorContainer),
+                style: TextStyle(
+                  color: colorScheme.onErrorContainer,
+                  fontSize: 16,
+                ),
               ),
             ),
           ],

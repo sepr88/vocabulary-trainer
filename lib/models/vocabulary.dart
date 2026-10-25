@@ -45,16 +45,20 @@ class VocabularyEntry {
     required this.level,
     required this.german,
     required this.portuguese,
+    required this.germanExample,
+    required this.portugueseExample,
   });
 
   final String id;
   final ProficiencyLevel level;
   final LanguageForm german;
   final LanguageForm portuguese;
+  final String germanExample;
+  final String portugueseExample;
 
   static VocabularyEntry fromJson(Object? value, String path) {
     final object = _expectObject(value, path);
-    _expectKeys(object, const {'id', 'level', 'de', 'pt-PT'}, path);
+    _expectKeys(object, const {'id', 'level', 'de', 'pt-PT', 'examples'}, path);
     final id = _expectNonEmptyString(object['id'], '$path.id');
     final levelValue = _expectNonEmptyString(object['level'], '$path.level');
     final level = switch (levelValue) {
@@ -62,11 +66,20 @@ class VocabularyEntry {
       'advanced' => ProficiencyLevel.advanced,
       _ => throw FormatException('$path.level must be beginner or advanced.'),
     };
+    final examples = _expectObject(object['examples'], '$path.examples');
+    _expectKeys(examples, const {'de', 'pt-PT'}, '$path.examples');
+    final germanExample = _expectExample(examples['de'], '$path.examples.de');
+    final portugueseExample = _expectExample(
+      examples['pt-PT'],
+      '$path.examples.pt-PT',
+    );
     return VocabularyEntry(
       id: id,
       level: level,
       german: LanguageForm.fromJson(object['de'], '$path.de'),
       portuguese: LanguageForm.fromJson(object['pt-PT'], '$path.pt-PT'),
+      germanExample: germanExample,
+      portugueseExample: portugueseExample,
     );
   }
 }
@@ -136,4 +149,12 @@ String _expectNonEmptyString(Object? value, String path) {
     throw FormatException('$path must be a non-empty string.');
   }
   return value;
+}
+
+String _expectExample(Object? value, String path) {
+  final example = _expectNonEmptyString(value, path);
+  if (example.trim().split(RegExp(r'\s+')).length > 12) {
+    throw FormatException('$path must contain no more than 12 words.');
+  }
+  return example;
 }

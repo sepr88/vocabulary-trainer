@@ -8,6 +8,8 @@ VocabularyEntry sampleEntry({
   return VocabularyEntry(
     id: id,
     level: ProficiencyLevel.beginner,
+    germanExample: 'Das Haus ist wichtig.',
+    portugueseExample: 'A casa é importante.',
     german: LanguageForm(
       primary: german,
       accepted: [german, german.replaceAll(RegExp(r'^(der|die|das) '), '')],
