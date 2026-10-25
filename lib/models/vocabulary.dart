@@ -159,6 +159,7 @@ class VocabularyDataset {
         r'$.conjugations['
         '$index]',
         requireTopic: version >= 6,
+        requireTranslation: version >= 7,
       );
       if (!conjugationIds.add(conjugation.id)) {
         throw FormatException('Duplicate conjugation ID "${conjugation.id}".');
