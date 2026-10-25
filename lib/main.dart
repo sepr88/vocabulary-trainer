@@ -218,6 +218,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   List<VocabularyEntry> _entries = const [];
+  Map<String, PracticeHistory> _practiceHistory = const {};
   ProgressSnapshot? _progress;
   int? _vocabularyVersion;
   Object? _loadError;
@@ -236,11 +237,13 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     try {
       final entries = await widget.store.activeEntries();
+      final practiceHistory = await widget.store.practiceHistory();
       final progress = await widget.store.progress();
       final vocabularyVersion = await widget.store.activeVocabularyVersion();
       if (!mounted) return;
       setState(() {
         _entries = entries;
+        _practiceHistory = practiceHistory;
         _progress = progress;
         _vocabularyVersion = vocabularyVersion;
         _loading = false;
@@ -257,8 +260,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Future<void> _startPractice() async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
-        builder: (context) =>
-            PracticeScreen(store: widget.store, entries: _entries),
+        builder: (context) => PracticeScreen(
+          store: widget.store,
+          entries: _entries,
+          practiceHistory: _practiceHistory,
+        ),
       ),
     );
     if (mounted) await _load();
@@ -547,8 +553,13 @@ class PracticeScreen extends StatefulWidget {
     super.key,
     required this.store,
     required List<VocabularyEntry> entries,
+    Map<String, PracticeHistory> practiceHistory = const {},
     Random? random,
-  }) : session = PracticeSession.create(entries, random: random);
+  }) : session = PracticeSession.create(
+         entries,
+         practiceHistory: practiceHistory,
+         random: random,
+       );
 
   final TrainerStore store;
   final PracticeSession session;

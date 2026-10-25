@@ -27,6 +27,7 @@ Keep the implementation simple, maintainable, and easy to extend.
 
 - **SYS-006:** `flutter analyze` completes without errors.
 - **SYS-007:** All automated tests required by SYS-014 pass.
-- **SYS-014:** Automated tests cover initialization from valid bundled vocabulary; vocabulary additions, changes, and removals across app releases while preserving progress; persistence of practice results across app restarts; rejection of invalid bundled data; answer matching; session selection; session-summary calculations; and prevention of duplicate progress updates. Tests verify that failed or interrupted initialization and updates do not leave partial data or corrupt existing valid data.
+- **SYS-014:** Automated tests cover initialization from valid bundled vocabulary; vocabulary additions, changes, and removals across app releases while preserving progress; persistence of practice results across app restarts; rejection of invalid bundled data; answer matching; session selection, including PRD-032 weight calculations, weighted draw behavior, selection without replacement, and inclusion of every entry when 15 or fewer are available; session-summary calculations; and prevention of duplicate progress updates. Tests verify that failed or interrupted initialization and updates do not leave partial data or corrupt existing valid data.
+- **SYS-018:** The local vocabulary store persists, for each entry, the cumulative number of completed attempts and incorrect attempts needed by the session selector. Revealed answers count as incorrect attempts. The selector uses these counts when applying the PRD-032 weights.
 
 ## Open system decisions

@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
+import '../domain/practice_session.dart';
 import '../models/vocabulary.dart';
 
 class ProgressSnapshot {
@@ -27,6 +28,7 @@ abstract interface class TrainerStore {
   Future<void> reconcile(VocabularyDataset dataset);
   Future<int> activeVocabularyVersion();
   Future<List<VocabularyEntry>> activeEntries();
+  Future<Map<String, PracticeHistory>> practiceHistory();
   Future<ProgressSnapshot> progress();
   Future<bool> recordAttempt({
     required String attemptId,
@@ -147,6 +149,25 @@ class SqliteTrainerStore implements TrainerStore {
       orderBy: 'id',
     );
     return List.unmodifiable(rows.map(_entryFromRow));
+  }
+
+  @override
+  Future<Map<String, PracticeHistory>> practiceHistory() async {
+    final rows = await _database.rawQuery('''
+      SELECT
+        entry_id,
+        COUNT(*) AS attempts,
+        SUM(1 - correct) AS incorrect
+      FROM practice_attempts
+      GROUP BY entry_id
+    ''');
+    return Map.unmodifiable({
+      for (final row in rows)
+        row['entry_id']! as String: PracticeHistory(
+          completedAttempts: row['attempts']! as int,
+          incorrectAttempts: row['incorrect']! as int,
+        ),
+    });
   }
 
   @override
