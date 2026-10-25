@@ -1,0 +1,134 @@
+{
+  "languages": [
+    {
+      "language": "de",
+      "regularRule": "For most German verbs, remove -en from the infinitive to find the stem. Add -e, -st, -t, -en, -t, -en for ich, du, er/sie/es, wir, ihr, and sie/Sie. Verbs with a stem ending in -d or -t often add an extra e before -st and -t.",
+      "regularExamples": [
+        {
+          "verb": "machen",
+          "classLabel": "Regular verb",
+          "forms": [
+            {"subject": "ich", "form": "mache"},
+            {"subject": "du", "form": "machst"},
+            {"subject": "er/sie/es", "form": "macht"},
+            {"subject": "wir", "form": "machen"},
+            {"subject": "ihr", "form": "macht"},
+            {"subject": "sie/Sie", "form": "machen"}
+          ]
+        }
+      ],
+      "irregularExamples": [
+        {
+          "verb": "sein",
+          "classLabel": "To be",
+          "forms": [
+            {"subject": "ich", "form": "bin"},
+            {"subject": "du", "form": "bist"},
+            {"subject": "er/sie/es", "form": "ist"},
+            {"subject": "wir", "form": "sind"},
+            {"subject": "ihr", "form": "seid"},
+            {"subject": "sie/Sie", "form": "sind"}
+          ]
+        },
+        {
+          "verb": "haben",
+          "classLabel": "To have",
+          "forms": [
+            {"subject": "ich", "form": "habe"},
+            {"subject": "du", "form": "hast"},
+            {"subject": "er/sie/es", "form": "hat"},
+            {"subject": "wir", "form": "haben"},
+            {"subject": "ihr", "form": "habt"},
+            {"subject": "sie/Sie", "form": "haben"}
+          ]
+        },
+        {
+          "verb": "werden",
+          "classLabel": "To become",
+          "forms": [
+            {"subject": "ich", "form": "werde"},
+            {"subject": "du", "form": "wirst"},
+            {"subject": "er/sie/es", "form": "wird"},
+            {"subject": "wir", "form": "werden"},
+            {"subject": "ihr", "form": "werdet"},
+            {"subject": "sie/Sie", "form": "werden"}
+          ]
+        }
+      ]
+    },
+    {
+      "language": "pt-PT",
+      "regularRule": "Remove -ar, -er, or -ir from the infinitive and add the matching endings. For -ar verbs: -o, -as, -a, -amos, -am. For -er verbs: -o, -es, -e, -emos, -em. For -ir verbs: -o, -es, -e, -imos, -em. The ele/ela/você and vocês/eles/elas forms share their respective endings.",
+      "regularExamples": [
+        {
+          "verb": "falar",
+          "classLabel": "-ar verb",
+          "forms": [
+            {"subject": "eu", "form": "falo"},
+            {"subject": "tu", "form": "falas"},
+            {"subject": "ele/ela/você", "form": "fala"},
+            {"subject": "nós", "form": "falamos"},
+            {"subject": "vocês/eles/elas", "form": "falam"}
+          ]
+        },
+        {
+          "verb": "comer",
+          "classLabel": "-er verb",
+          "forms": [
+            {"subject": "eu", "form": "como"},
+            {"subject": "tu", "form": "comes"},
+            {"subject": "ele/ela/você", "form": "come"},
+            {"subject": "nós", "form": "comemos"},
+            {"subject": "vocês/eles/elas", "form": "comem"}
+          ]
+        },
+        {
+          "verb": "abrir",
+          "classLabel": "-ir verb",
+          "forms": [
+            {"subject": "eu", "form": "abro"},
+            {"subject": "tu", "form": "abres"},
+            {"subject": "ele/ela/você", "form": "abre"},
+            {"subject": "nós", "form": "abrimos"},
+            {"subject": "vocês/eles/elas", "form": "abrem"}
+          ]
+        }
+      ],
+      "irregularExamples": [
+        {
+          "verb": "ser",
+          "classLabel": "To be (identity)",
+          "forms": [
+            {"subject": "eu", "form": "sou"},
+            {"subject": "tu", "form": "és"},
+            {"subject": "ele/ela/você", "form": "é"},
+            {"subject": "nós", "form": "somos"},
+            {"subject": "vocês/eles/elas", "form": "são"}
+          ]
+        },
+        {
+          "verb": "estar",
+          "classLabel": "To be (state or location)",
+          "forms": [
+            {"subject": "eu", "form": "estou"},
+            {"subject": "tu", "form": "estás"},
+            {"subject": "ele/ela/você", "form": "está"},
+            {"subject": "nós", "form": "estamos"},
+            {"subject": "vocês/eles/elas", "form": "estão"}
+          ]
+        },
+        {
+          "verb": "ir",
+          "classLabel": "To go",
+          "forms": [
+            {"subject": "eu", "form": "vou"},
+            {"subject": "tu", "form": "vais"},
+            {"subject": "ele/ela/você", "form": "vai"},
+            {"subject": "nós", "form": "vamos"},
+            {"subject": "vocês/eles/elas", "form": "vão"}
+          ]
+        }
+      ]
+    }
+  ]
+}

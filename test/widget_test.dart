@@ -161,6 +161,72 @@ void main() {
     expect(find.text('Items practiced'), findsOneWidget);
     expect(find.text('1'), findsOneWidget);
   });
+
+  testWidgets(
+    'opens only the selected language reference and returns to the active prompt',
+    (tester) async {
+      tester.view.devicePixelRatio = 1;
+      tester.view.physicalSize = const Size(393, 851);
+      addTearDown(tester.view.resetPhysicalSize);
+      addTearDown(tester.view.resetDevicePixelRatio);
+
+      final portugueseEntry = sampleConjugation(
+        id: 'pt-PT-beginner-ser',
+        language: ConjugationLanguage.portuguese,
+        infinitive: 'ser',
+        subjects: const [
+          ConjugationSubject(id: 'eu', primary: 'sou', accepted: ['sou']),
+          ConjugationSubject(id: 'tu', primary: 'és', accepted: ['és']),
+        ],
+      );
+      final store = _MemoryStore(
+        [sampleEntry()],
+        conjugations: [portugueseEntry],
+      );
+      await tester.pumpWidget(MyApp(storeLoader: () async => store));
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.text('Practice conjugation'));
+      await tester.pumpAndSettle();
+      expect(find.byTooltip('Grammar reference'), findsNothing);
+      await tester.tap(find.text('European Portuguese'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Start session (2 prompts)'));
+      await tester.pumpAndSettle();
+
+      final promptFinder = find.byKey(
+        const ValueKey('conjugation-prompt-infinitive'),
+      );
+      final promptBeforeHelp = tester.widget<Text>(promptFinder);
+      expect(find.text('Prompt 1 of 2'), findsOneWidget);
+      expect(find.byTooltip('Grammar reference'), findsOneWidget);
+      await tester.tap(find.byTooltip('Grammar reference'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('European Portuguese grammar'), findsOneWidget);
+      expect(find.text('Regular conjugation'), findsOneWidget);
+      expect(find.text('falar'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('ser'),
+        200,
+        scrollable: find.descendant(
+          of: find.byKey(const ValueKey('grammar-reference-content')),
+          matching: find.byType(Scrollable),
+        ),
+      );
+      expect(find.text('ser'), findsOneWidget);
+      expect(find.text('German grammar'), findsNothing);
+      expect(find.text('machen'), findsNothing);
+
+      await tester.pageBack();
+      await tester.pumpAndSettle();
+      expect(find.text('Prompt 1 of 2'), findsOneWidget);
+      expect(tester.widget<Text>(promptFinder).data, promptBeforeHelp.data);
+      expect(find.byTooltip('Grammar reference'), findsOneWidget);
+      expect(find.byKey(const ValueKey('conjugation-answer')), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
 }
 
 String storeAnswerFor(WidgetTester tester) {

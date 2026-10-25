@@ -1,12 +1,14 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import 'data/bootstrap.dart';
 import 'data/trainer_store.dart';
 import 'domain/conjugation_session.dart';
 import 'domain/practice_session.dart';
 import 'models/conjugation.dart';
+import 'models/grammar_reference.dart';
 import 'models/vocabulary.dart';
 
 void main() {
@@ -1262,7 +1264,24 @@ class _ConjugationPracticeScreenState extends State<ConjugationPracticeScreen> {
     final questionNumber = _index + 1;
     final questionCount = widget.session.prompts.length;
     return Scaffold(
-      appBar: AppBar(title: const Text('Conjugation practice')),
+      appBar: AppBar(
+        title: const Text('Conjugation practice'),
+        actions: [
+          IconButton(
+            key: const ValueKey('grammar-reference-help'),
+            tooltip: 'Grammar reference',
+            icon: const Icon(Icons.help_outline_rounded),
+            onPressed: () {
+              Navigator.of(context).push<void>(
+                MaterialPageRoute<void>(
+                  builder: (context) =>
+                      GrammarReferenceScreen(language: widget.session.language),
+                ),
+              );
+            },
+          ),
+        ],
+      ),
       body: ListView(
         padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
         children: [
@@ -1305,6 +1324,7 @@ class _ConjugationPracticeScreenState extends State<ConjugationPracticeScreen> {
                 ),
                 const SizedBox(height: 10),
                 Text(
+                  key: const ValueKey('conjugation-prompt-infinitive'),
                   _prompt.entry.infinitive,
                   style: Theme.of(context).textTheme.headlineMedium,
                 ),
@@ -1421,6 +1441,157 @@ class _ConjugationPracticeScreenState extends State<ConjugationPracticeScreen> {
             ),
           ],
         ],
+      ),
+    );
+  }
+}
+
+class GrammarReferenceScreen extends StatefulWidget {
+  const GrammarReferenceScreen({super.key, required this.language});
+
+  final ConjugationLanguage language;
+
+  @override
+  State<GrammarReferenceScreen> createState() => _GrammarReferenceScreenState();
+}
+
+class _GrammarReferenceScreenState extends State<GrammarReferenceScreen> {
+  late Future<LanguageGrammarReference> _reference;
+
+  Future<LanguageGrammarReference> _loadReference() async {
+    final source = await rootBundle.loadString(grammarReferenceAssetPath);
+    return GrammarReferenceDataset.fromJsonString(source)
+        .forLanguage(widget.language);
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _reference = _loadReference();
+  }
+
+  void _retry() {
+    setState(() {
+      _reference = _loadReference();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final languageName = widget.language.displayName;
+    return Scaffold(
+      appBar: AppBar(title: Text('$languageName grammar')),
+      body: FutureBuilder<LanguageGrammarReference>(
+        future: _reference,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return _ErrorPanel(
+              icon: Icons.menu_book_rounded,
+              title: 'Grammar reference unavailable',
+              message: 'We could not load the bundled grammar reference.',
+              details: '${snapshot.error}',
+              actionLabel: 'Try again',
+              onRetry: _retry,
+            );
+          }
+          final reference = snapshot.requireData;
+          return ListView(
+            key: const ValueKey('grammar-reference-content'),
+            padding: const EdgeInsets.fromLTRB(20, 16, 20, 32),
+            children: [
+              Text(
+                'Present indicative',
+                style: Theme.of(context).textTheme.headlineMedium,
+              ),
+              const SizedBox(height: 16),
+              Card(
+                child: Padding(
+                  padding: const EdgeInsets.all(18),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Regular conjugation',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        reference.regularRule,
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Regular examples',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              for (final example in reference.regularExamples)
+                _GrammarVerbCard(example: example),
+              const SizedBox(height: 12),
+              Text(
+                'Common irregular verbs',
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+              const SizedBox(height: 8),
+              for (final example in reference.irregularExamples)
+                _GrammarVerbCard(example: example),
+            ],
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _GrammarVerbCard extends StatelessWidget {
+  const _GrammarVerbCard({required this.example});
+
+  final GrammarVerbExample example;
+
+  @override
+  Widget build(BuildContext context) {
+    return Card(
+      margin: const EdgeInsets.only(bottom: 10),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(example.verb, style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 2),
+            Text(
+              example.classLabel,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+            const SizedBox(height: 10),
+            for (final form in example.forms)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 3),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        form.subject,
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                    ),
+                    Text(
+                      form.form,
+                      style: Theme.of(context).textTheme.bodyLarge
+                          ?.copyWith(fontWeight: FontWeight.w700),
+                    ),
+                  ],
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
