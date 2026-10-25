@@ -32,6 +32,9 @@
 - **PRD-027:** A practice item is completed when the user checks an answer or reveals its translation. The app records exactly one result for the item and prevents further answer checks or reveals for it. The user advances to the next item using an explicit action; on the final item, this action ends the session and displays its summary.
 - **PRD-029:** The bundled MVP vocabulary contains at least 100 distinct entries. Each entry provides German and European Portuguese forms and is identified as suitable for beginner or advanced learners.
 - **PRD-030:** After a user reveals a translation, the app displays the revealed primary translation together with the text “Marked incorrect” until the user advances to the next practice item.
+- **PRD-033:** Each active vocabulary entry includes one example sentence in German and one equivalent example sentence in European Portuguese. Each sentence contains no more than 12 whitespace-separated words and demonstrates the entry’s use in context.
+- **PRD-034:** During a practice item, the app displays the example sentence in the source language before the user responds. After the user checks an answer or reveals the translation, the app displays the paired example sentence in the target language alongside the translation. The target-language sentence is not displayed before the response.
+- **PRD-035:** In portrait orientation, with the keyboard hidden and at default text scaling, the practice screen displays all item content and its primary action without vertical scrolling or clipping. Before the user responds, this includes the source prompt, source-language example, and response controls. After the user responds, it includes the revealed translation, target-language example, feedback, and advance action. Text is at least 16sp.
 
 ## Learning progress
 
@@ -58,7 +61,6 @@ Keep the experience simple, intuitive, fast to start, focused, consistent, acces
 - **OPD-001:** What vocabulary expansion scope, content targets, and release timeline should the product use?
 - **OPD-002:** Should the app include a conjugation trainer? If so, which languages, tenses, and proficiency levels should it support?
 - **OPD-003:** Should users be able to reset their training history and progress? If so, what confirmation or recovery safeguards should apply?
-- **OPD-004:** Should vocabulary entries include example sentences that show how each word is used in context?
 - **OPD-005:** Should users be able to review words they answered incorrectly? If so, how should that review relate to regular practice sessions?
 - **OPD-006:** Should users be able to browse or practice vocabulary grouped by topics such as travel, food, or work?
 - **OPD-007:** Should the app include learning goals, achievements, or both?
