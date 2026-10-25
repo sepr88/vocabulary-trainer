@@ -21,7 +21,7 @@ void main() {
     await tester.tap(find.text('Start practice'));
     await tester.pumpAndSettle();
     final germanToPortuguese = find
-        .text('German → European Portuguese')
+        .text('German → Portuguese')
         .evaluate()
         .isNotEmpty;
     expect(
@@ -190,7 +190,7 @@ void main() {
       await tester.tap(find.text('Practice conjugation'));
       await tester.pumpAndSettle();
       expect(find.byTooltip('Grammar reference'), findsNothing);
-      await tester.tap(find.text('European Portuguese'));
+      await tester.tap(find.text('Portuguese'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Start session (2 prompts)'));
       await tester.pumpAndSettle();
@@ -204,7 +204,7 @@ void main() {
       await tester.tap(find.byTooltip('Grammar reference'));
       await tester.pumpAndSettle();
 
-      expect(find.text('European Portuguese grammar'), findsOneWidget);
+      expect(find.text('Portuguese grammar'), findsOneWidget);
       expect(find.text('Regular conjugation'), findsOneWidget);
       expect(find.text('falar'), findsOneWidget);
       await tester.scrollUntilVisible(

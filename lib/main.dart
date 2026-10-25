@@ -776,8 +776,8 @@ class _PracticeScreenState extends State<PracticeScreen> {
     final questionCount = widget.session.items.length;
     final directionLabel =
         _item.direction == TranslationDirection.germanToPortuguese
-        ? 'German → European Portuguese'
-        : 'European Portuguese → German';
+        ? 'German → Portuguese'
+        : 'Portuguese → German';
     final feedbackColor = _correct == true
         ? colorScheme.primaryContainer
         : colorScheme.errorContainer;
@@ -1128,11 +1128,7 @@ class _ConjugationSetupScreenState extends State<ConjugationSetupScreen> {
               for (final language in ConjugationLanguage.values)
                 ButtonSegment(
                   value: language,
-                  label: Text(
-                    language == ConjugationLanguage.german
-                        ? 'German'
-                        : 'European Portuguese',
-                  ),
+                  label: Text(language.displayName),
                 ),
             ],
             selected: {_language},

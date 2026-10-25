@@ -38,7 +38,7 @@
 
 ## Conjugation practice
 
-- **PRD-036:** The app offers conjugation practice as a mode separate from vocabulary translation practice. Before starting, users choose German or European Portuguese and a proficiency level: beginner or advanced. This choice does not change the translation direction rules for vocabulary practice.
+- **PRD-036:** The app offers conjugation practice as a mode separate from vocabulary translation practice. Before starting, users choose German or Portuguese and a proficiency level: beginner or advanced. The Portuguese choice refers to European Portuguese content. This choice does not change the translation direction rules for vocabulary practice.
 - **PRD-037:** The initial conjugation practice covers the present indicative. Each practice prompt displays a verb in its infinitive form and a subject prompt appropriate to the selected language, and asks the user to provide the conjugated form.
 - **PRD-038:** For each combination of language and proficiency level, the bundled conjugation content includes at least 10 distinct verbs and their present-indicative forms for the subject prompts supported for that language.
 - **PRD-039:** Users can submit a conjugated form or reveal the expected form. When checking, the app ignores leading and trailing whitespace and letter-case differences; all other characters, including accents and diacritics, must match a stored accepted form. The reveal displays the designated form and negative feedback. Each prompt can be completed only once, and the user advances using an explicit action.
@@ -57,6 +57,7 @@
 - **PRD-045:** A conjugation session contains up to 15 distinct verb-subject prompts for the selected language and proficiency level. If 15 or fewer prompts are available, each is included exactly once. If more than 15 are available, prompts are selected using the weighted selection in PRD-032.
 - **PRD-046:** After a conjugation exercise starts, the exercise screen provides a tappable help control. Activating it opens a separate grammar-reference screen for the language selected for that exercise. The reference screen does not offer content for the other language. Returning to the exercise preserves the current prompt and session progress.
 - **PRD-047:** The grammar-reference screen explains present-indicative regular conjugation for the selected language and shows complete conjugation forms using that language’s supported subject forms. It includes an example regular German verb, or one regular European Portuguese verb from each `-ar`, `-er`, and `-ir` class. It also shows complete present-indicative forms for at least three common irregular verbs in the selected language: German `sein`, `haben`, and `werden`; or European Portuguese `ser`, `estar`, and `ir`.
+- **PRD-052:** Whenever the app names the Portuguese language in user-facing labels or messages—including language choices, translation-direction labels, progress labels, and grammar-reference titles—it uses “Portuguese,” not “European Portuguese.” This display naming does not change the supported language variety; Portuguese learning content remains European Portuguese.
 
 ## Availability and empty state
 

@@ -86,7 +86,7 @@ void main() {
       await tester.pumpAndSettle();
 
       final germanToPortuguese = find
-          .text('German → European Portuguese')
+          .text('German → Portuguese')
           .evaluate()
           .isNotEmpty;
       final sourceSentence = tester.widget<Text>(

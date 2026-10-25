@@ -4,7 +4,7 @@ import 'proficiency_level.dart';
 
 enum ConjugationLanguage {
   german('de', 'German'),
-  portuguese('pt-PT', 'European Portuguese');
+  portuguese('pt-PT', 'Portuguese');
 
   const ConjugationLanguage(this.id, this.displayName);
 
