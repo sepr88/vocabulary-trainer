@@ -480,24 +480,24 @@ class _ProgressOverview extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final columns = constraints.maxWidth >= 500 ? 3 : 2;
-        return GridView.builder(
-          itemCount: metrics.length,
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
-            mainAxisExtent: 118,
-            crossAxisSpacing: 12,
-            mainAxisSpacing: 12,
-          ),
-          itemBuilder: (context, index) {
-            final metric = metrics[index];
-            return _ProgressTile(
-              label: metric.$1,
-              value: metric.$2,
-              icon: metric.$3,
-            );
-          },
+        const spacing = 12.0;
+        final tileWidth =
+            (constraints.maxWidth - spacing * (columns - 1)) / columns;
+        return Wrap(
+          spacing: spacing,
+          runSpacing: spacing,
+          children: [
+            for (final metric in metrics)
+              SizedBox(
+                width: tileWidth,
+                height: 118,
+                child: _ProgressTile(
+                  label: metric.$1,
+                  value: metric.$2,
+                  icon: metric.$3,
+                ),
+              ),
+          ],
         );
       },
     );

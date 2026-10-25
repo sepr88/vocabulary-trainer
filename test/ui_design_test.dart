@@ -27,6 +27,31 @@ void main() {
     expect(find.text('Vocabulary version 1'), findsOneWidget);
   });
 
+  testWidgets('home progress tiles scroll fully into view on Pixel 5 size', (
+    tester,
+  ) async {
+    tester.view.devicePixelRatio = 1;
+    tester.view.physicalSize = const Size(393, 851);
+    addTearDown(tester.view.resetPhysicalSize);
+    addTearDown(tester.view.resetDevicePixelRatio);
+
+    final store = _DesignTestStore([sampleEntry()]);
+    await tester.pumpWidget(MyApp(storeLoader: () async => store));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(Scrollable), findsOneWidget);
+    final lastTile = find.text('Entries answered incorrectly');
+    final homeScrollView = find.byType(Scrollable).first;
+    await tester.scrollUntilVisible(lastTile, 200, scrollable: homeScrollView);
+    await tester.pumpAndSettle();
+
+    final tileRect = tester.getRect(lastTile);
+    final scrollRect = tester.getRect(find.byType(Scrollable).first);
+    expect(tileRect.top, greaterThanOrEqualTo(scrollRect.top));
+    expect(tileRect.bottom, lessThanOrEqualTo(scrollRect.bottom));
+    expect(tester.takeException(), isNull);
+  });
+
   testWidgets('practice shows a direction chip and session progress', (
     tester,
   ) async {
