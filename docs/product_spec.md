@@ -36,11 +36,22 @@
 - **PRD-034:** During a practice item, the app displays the example sentence in the source language before the user responds. After the user checks an answer or reveals the translation, the app displays the paired example sentence in the target language alongside the translation. The target-language sentence is not displayed before the response.
 - **PRD-035:** In portrait orientation, with the keyboard hidden and at default text scaling, the practice screen displays all item content and its primary action without vertical scrolling or clipping. Before the user responds, this includes the source prompt, source-language example, and response controls. After the user responds, it includes the revealed translation, target-language example, feedback, and advance action. Text is at least 16sp.
 
+## Conjugation practice
+
+- **PRD-036:** The app offers conjugation practice as a mode separate from vocabulary translation practice. Before starting, users choose German or European Portuguese and a proficiency level: beginner or advanced. This choice does not change the translation direction rules for vocabulary practice.
+- **PRD-037:** The initial conjugation practice covers the present indicative. Each practice prompt displays a verb in its infinitive form and a subject prompt appropriate to the selected language, and asks the user to provide the conjugated form.
+- **PRD-038:** For each combination of language and proficiency level, the bundled conjugation content includes at least 10 distinct verbs and their present-indicative forms for the subject prompts supported for that language.
+- **PRD-039:** Users can submit a conjugated form or reveal the expected form. When checking, the app ignores leading and trailing whitespace and letter-case differences; all other characters, including accents and diacritics, must match a stored accepted form. The reveal displays the designated form and negative feedback. Each prompt can be completed only once, and the user advances using an explicit action.
+- **PRD-040:** A completed conjugation session displays the number of prompts practiced, correct and incorrect counts, and the percentage correct. Conjugation results are recorded cumulatively and remain separate from the vocabulary-practice metrics in PRD-010.
+
 ## Learning progress
 
 - **PRD-010:** The progress overview shows the total number of vocabulary entries, the number of items practiced, the number of correct answers, the number of incorrect answers, the number of unique entries answered correctly, and the number of unique entries answered incorrectly.
 - **PRD-011:** Progress reflects actual practice activity and remains available after the app is closed and reopened.
 - **PRD-028:** The total vocabulary count and unique-entry counts include only active vocabulary entries. Cumulative counts of items practiced, correct answers, and incorrect answers include all recorded attempts, including attempts for entries later retired from the active vocabulary.
+- **PRD-041:** The progress overview displays conjugation prompts practiced, correct answers, incorrect answers, and accuracy as separate metrics for each language and proficiency level. These are cumulative across conjugation sessions. Accuracy is the number of correct answers divided by the number of prompts practiced, expressed as a percentage; it is 0% when no prompts have been practiced. A revealed answer counts as incorrect, as specified in PRD-039.
+- **PRD-042:** A unique conjugation prompt is the combination of a conjugation record and one of its subject forms. A prompt counts as answered correctly if it has at least one correct attempt, and as answered incorrectly if it has at least one incorrect attempt. It may count toward both totals.
+- **PRD-043:** Conjugation results do not contribute to vocabulary practice totals or unique-entry metrics in PRD-010 and PRD-021, and do not affect vocabulary session selection under PRD-032. The app displays conjugation progress separately from vocabulary progress.
 
 ## Availability and empty state
 
