@@ -12,9 +12,13 @@ void main() {
       final source = await rootBundle.loadString('assets/vocabulary.json');
       final dataset = VocabularyDataset.fromJsonString(source);
 
-      expect(dataset.version, 5);
-      expect(dataset.entries, hasLength(100));
-      expect(dataset.conjugations, hasLength(40));
+      expect(dataset.version, 6);
+      expect(dataset.entries.length, greaterThanOrEqualTo(200));
+      expect(
+        dataset.entries.map((entry) => entry.id).toSet(),
+        hasLength(dataset.entries.length),
+      );
+      expect(dataset.conjugations.length, greaterThanOrEqualTo(120));
       for (final language in ConjugationLanguage.values) {
         for (final level in ProficiencyLevel.values) {
           expect(
@@ -22,10 +26,40 @@ void main() {
                 .where(
                   (entry) => entry.language == language && entry.level == level,
                 )
+                .map((entry) => entry.infinitive.toLowerCase())
+                .toSet()
                 .length,
-            10,
+            greaterThanOrEqualTo(30),
           );
+          for (final topic in TrainingTopics.conjugation.where(
+            (topic) => topic.level == level,
+          )) {
+            expect(
+              dataset.conjugations
+                  .where(
+                    (entry) =>
+                        entry.language == language &&
+                        entry.level == level &&
+                        entry.topic == topic.id,
+                  )
+                  .map((entry) => entry.infinitive.toLowerCase())
+                  .toSet()
+                  .length,
+              greaterThanOrEqualTo(10),
+            );
+          }
         }
+      }
+      for (final topic in TrainingTopics.vocabulary) {
+        expect(
+          dataset.entries
+              .where(
+                (entry) =>
+                    entry.topic == topic.id && entry.level == topic.level,
+              )
+              .length,
+          greaterThanOrEqualTo(10),
+        );
       }
       final portugueseSer = dataset.conjugations.singleWhere(
         (entry) => entry.id == 'pt-PT-beginner-ser',
@@ -50,7 +84,6 @@ void main() {
             .map((subject) => subject.id),
         ['ich', 'du', 'er/sie/es', 'wir', 'ihr', 'sie/Sie'],
       );
-      expect(dataset.entries.map((entry) => entry.id).toSet(), hasLength(100));
       final door = dataset.entries.singleWhere((entry) => entry.id == 'de-004');
       expect(door.germanExample, 'Die Tür ist offen.');
       expect(door.portugueseExample, 'A porta está aberta.');

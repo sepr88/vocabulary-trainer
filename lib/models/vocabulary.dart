@@ -2,8 +2,10 @@ import 'dart:convert';
 
 import 'conjugation.dart';
 import 'proficiency_level.dart';
+import 'training_topic.dart';
 
 export 'proficiency_level.dart';
+export 'training_topic.dart';
 
 class LanguageForm {
   const LanguageForm({required this.primary, required this.accepted});
@@ -46,6 +48,7 @@ class VocabularyEntry {
   const VocabularyEntry({
     required this.id,
     required this.level,
+    this.topic = '',
     required this.german,
     required this.portuguese,
     required this.germanExample,
@@ -54,14 +57,21 @@ class VocabularyEntry {
 
   final String id;
   final ProficiencyLevel level;
+  final String topic;
   final LanguageForm german;
   final LanguageForm portuguese;
   final String germanExample;
   final String portugueseExample;
 
-  static VocabularyEntry fromJson(Object? value, String path) {
+  static VocabularyEntry fromJson(
+    Object? value,
+    String path, {
+    bool requireTopic = false,
+  }) {
     final object = _expectObject(value, path);
-    _expectKeys(object, const {'id', 'level', 'de', 'pt-PT', 'examples'}, path);
+    final expectedKeys = {'id', 'level', 'de', 'pt-PT', 'examples'};
+    if (requireTopic) expectedKeys.add('topic');
+    _expectKeys(object, expectedKeys, path);
     final id = _expectNonEmptyString(object['id'], '$path.id');
     final levelValue = _expectNonEmptyString(object['level'], '$path.level');
     final level = switch (levelValue) {
@@ -69,6 +79,17 @@ class VocabularyEntry {
       'advanced' => ProficiencyLevel.advanced,
       _ => throw FormatException('$path.level must be beginner or advanced.'),
     };
+    final topic = object.containsKey('topic')
+        ? _expectNonEmptyString(object['topic'], '$path.topic')
+        : '';
+    if (topic.isNotEmpty) {
+      final topicDefinition = TrainingTopics.vocabularyById(topic);
+      if (topicDefinition == null || topicDefinition.level != level) {
+        throw FormatException(
+          '$path.topic must be a known topic applicable to its level.',
+        );
+      }
+    }
     final examples = _expectObject(object['examples'], '$path.examples');
     _expectKeys(examples, const {'de', 'pt-PT'}, '$path.examples');
     final germanExample = _expectExample(examples['de'], '$path.examples.de');
@@ -79,6 +100,7 @@ class VocabularyEntry {
     return VocabularyEntry(
       id: id,
       level: level,
+      topic: topic,
       german: LanguageForm.fromJson(object['de'], '$path.de'),
       portuguese: LanguageForm.fromJson(object['pt-PT'], '$path.pt-PT'),
       germanExample: germanExample,
@@ -113,10 +135,12 @@ class VocabularyDataset {
     final entries = <VocabularyEntry>[];
     final ids = <String>{};
     for (var index = 0; index < rawEntries.length; index++) {
+      final requireTopics = version >= 6;
       final entry = VocabularyEntry.fromJson(
         rawEntries[index],
         r'$.entries['
         '$index]',
+        requireTopic: requireTopics,
       );
       if (!ids.add(entry.id)) {
         throw FormatException('Duplicate vocabulary ID "${entry.id}".');
@@ -134,6 +158,7 @@ class VocabularyDataset {
         rawConjugations[index],
         r'$.conjugations['
         '$index]',
+        requireTopic: version >= 6,
       );
       if (!conjugationIds.add(conjugation.id)) {
         throw FormatException('Duplicate conjugation ID "${conjugation.id}".');

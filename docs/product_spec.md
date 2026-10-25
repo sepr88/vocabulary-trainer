@@ -35,6 +35,8 @@
   **Beginner topics:** Greetings and introductions; family and people; numbers, dates and time; food and drink; home and daily routines; shopping and money; travel and transport; places and directions; health and the body; weather and clothing.
 
   **Advanced topics:** Work and education; society and politics; environment and climate; media and technology; economy and finance; culture and the arts; emotions and relationships; opinions and argumentation; law and public services; science and health.
+
+  The stable topic identifiers used in bundled data are the lowercase, hyphen-separated forms of these labels: `greetings-and-introductions`, `family-and-people`, `numbers-dates-and-time`, `food-and-drink`, `home-and-daily-routines`, `shopping-and-money`, `travel-and-transport`, `places-and-directions`, `health-and-the-body`, `weather-and-clothing`, `work-and-education`, `society-and-politics`, `environment-and-climate`, `media-and-technology`, `economy-and-finance`, `culture-and-the-arts`, `emotions-and-relationships`, `opinions-and-argumentation`, `law-and-public-services`, and `science-and-health`. These identifiers do not change the user-visible topic labels.
 - **PRD-030:** After a user reveals a translation, the app displays the revealed primary translation together with the text “Marked incorrect” until the user advances to the next practice item.
 - **PRD-033:** Each active vocabulary entry includes one example sentence in German and one equivalent example sentence in European Portuguese. Each sentence contains no more than 12 whitespace-separated words and demonstrates the entry’s use in context.
 - **PRD-034:** During a practice item, the app displays the example sentence in the source language before the user responds. After the user checks an answer or reveals the translation, the app displays the paired example sentence in the target language alongside the translation. The target-language sentence is not displayed before the response.
@@ -57,6 +59,8 @@
   **Advanced:** Work and education (working, learning, creating); opinions and ideas (thinking, believing, explaining); society and change (changing, improving, supporting).
 
   Each verb is assigned exactly one topic applicable to its proficiency level.
+
+  Stable topic identifiers are `daily-life-and-home`, `movement-and-travel`, `communication-and-social-life`, `work-and-education`, `opinions-and-ideas`, and `society-and-change`, corresponding in order to the topic labels above. These identifiers do not change the user-visible labels.
 - **PRD-057:** Before starting conjugation practice, users can select **All topics** or one topic applicable to the selected proficiency level. **All topics** is selected by default.
 - **PRD-058:** When a conjugation topic is selected, session candidates are limited to subject-form prompts for verbs assigned to that topic and matching the selected language and proficiency level. **All topics** includes all such prompts. Topic selection applies only to the current session and does not change cumulative conjugation progress metrics.
 

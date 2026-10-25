@@ -57,6 +57,7 @@ class PracticeSession {
 
   static PracticeSession create(
     List<VocabularyEntry> entries, {
+    String? topicId,
     Map<String, SelectionHistory> practiceHistory = const {},
     Random? random,
     DateTime? now,
@@ -65,6 +66,7 @@ class PracticeSession {
     final selectionTime = now ?? DateTime.now();
     final distinctEntries = <String, VocabularyEntry>{};
     for (final entry in entries) {
+      if (topicId != null && entry.topic != topicId) continue;
       distinctEntries.putIfAbsent(entry.id, () => entry);
     }
     final selected = weightedSelection(

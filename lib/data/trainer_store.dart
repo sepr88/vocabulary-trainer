@@ -95,7 +95,7 @@ class SqliteTrainerStore implements TrainerStore {
     final directory = await getDatabasesPath();
     final database = await openDatabase(
       p.join(directory, 'vocabulary_trainer.db'),
-      version: 3,
+      version: 4,
       onCreate: (db, version) => createTables(db),
       onUpgrade: (db, oldVersion, newVersion) =>
           upgradeTables(db, oldVersion, newVersion),
@@ -108,6 +108,7 @@ class SqliteTrainerStore implements TrainerStore {
       CREATE TABLE vocabulary_entries (
         id TEXT PRIMARY KEY,
         level TEXT NOT NULL,
+        topic TEXT NOT NULL DEFAULT '',
         de_primary TEXT NOT NULL,
         de_accepted TEXT NOT NULL,
         pt_primary TEXT NOT NULL,
@@ -150,6 +151,14 @@ class SqliteTrainerStore implements TrainerStore {
     if (oldVersion < 3 && newVersion >= 3) {
       await _createConjugationTables(database);
     }
+    if (oldVersion < 4 && newVersion >= 4) {
+      await database.execute(
+        "ALTER TABLE vocabulary_entries ADD COLUMN topic TEXT NOT NULL DEFAULT ''",
+      );
+      await database.execute(
+        "ALTER TABLE conjugations ADD COLUMN topic TEXT NOT NULL DEFAULT ''",
+      );
+    }
   }
 
   static Future<void> _createConjugationTables(
@@ -160,6 +169,7 @@ class SqliteTrainerStore implements TrainerStore {
         id TEXT PRIMARY KEY,
         language TEXT NOT NULL,
         level TEXT NOT NULL,
+        topic TEXT NOT NULL DEFAULT '',
         infinitive TEXT NOT NULL,
         tense TEXT NOT NULL,
         subjects TEXT NOT NULL,
@@ -195,9 +205,23 @@ class SqliteTrainerStore implements TrainerStore {
         return;
       }
 
+      final vocabularyColumns = await transaction.rawQuery(
+        'PRAGMA table_info(vocabulary_entries)',
+      );
+      final hasVocabularyTopics = vocabularyColumns.any(
+        (column) => column['name'] == 'topic',
+      );
+      final conjugationColumns = await transaction.rawQuery(
+        'PRAGMA table_info(conjugations)',
+      );
+      final hasConjugationTopics = conjugationColumns.any(
+        (column) => column['name'] == 'topic',
+      );
+
       await transaction.update('vocabulary_entries', {'active': 0});
       for (final entry in dataset.entries) {
         final values = _entryValues(entry)..['active'] = 1;
+        if (!hasVocabularyTopics) values.remove('topic');
         await transaction.insert(
           'vocabulary_entries',
           values,
@@ -213,6 +237,7 @@ class SqliteTrainerStore implements TrainerStore {
       await transaction.update('conjugations', {'active': 0});
       for (final entry in dataset.conjugations) {
         final values = _conjugationValues(entry)..['active'] = 1;
+        if (!hasConjugationTopics) values.remove('topic');
         await transaction.insert(
           'conjugations',
           values,
@@ -528,6 +553,7 @@ class SqliteTrainerStore implements TrainerStore {
   static Map<String, Object?> _entryValues(VocabularyEntry entry) => {
     'id': entry.id,
     'level': entry.level.name,
+    'topic': entry.topic,
     'de_primary': entry.german.primary,
     'de_accepted': jsonEncode(entry.german.accepted),
     'pt_primary': entry.portuguese.primary,
@@ -541,6 +567,7 @@ class SqliteTrainerStore implements TrainerStore {
     'id': entry.id,
     'language': entry.language.id,
     'level': entry.level.name,
+    'topic': entry.topic,
     'infinitive': entry.infinitive,
     'tense': entry.tense,
     'subjects': encodeConjugationSubjects(entry.subjects),
@@ -555,6 +582,7 @@ class SqliteTrainerStore implements TrainerStore {
           'language',
         ),
         level: ProficiencyLevel.values.byName(row['level']! as String),
+        topic: row['topic'] as String? ?? '',
         infinitive: row['infinitive']! as String,
         tense: row['tense']! as String,
         subjects: decodeConjugationSubjects(row['subjects']! as String),
@@ -564,6 +592,7 @@ class SqliteTrainerStore implements TrainerStore {
     return VocabularyEntry(
       id: row['id']! as String,
       level: ProficiencyLevel.values.byName(row['level']! as String),
+      topic: row['topic'] as String? ?? '',
       german: LanguageForm(
         primary: row['de_primary']! as String,
         accepted: List.unmodifiable(

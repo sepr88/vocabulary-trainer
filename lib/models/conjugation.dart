@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 import 'proficiency_level.dart';
+import 'training_topic.dart';
 
 enum ConjugationLanguage {
   german('de', 'German'),
@@ -91,6 +92,7 @@ class ConjugationEntry {
     required this.id,
     required this.language,
     required this.level,
+    this.topic = '',
     required this.infinitive,
     required this.tense,
     required this.subjects,
@@ -99,26 +101,44 @@ class ConjugationEntry {
   final String id;
   final ConjugationLanguage language;
   final ProficiencyLevel level;
+  final String topic;
   final String infinitive;
   final String tense;
   final List<ConjugationSubject> subjects;
 
-  static ConjugationEntry fromJson(Object? value, String path) {
+  static ConjugationEntry fromJson(
+    Object? value,
+    String path, {
+    bool requireTopic = false,
+  }) {
     final object = _expectObject(value, path);
-    _expectKeys(object, const {
+    final expectedKeys = <String>{
       'id',
       'language',
       'level',
       'infinitive',
       'tense',
       'subjects',
-    }, path);
+    };
+    if (requireTopic) expectedKeys.add('topic');
+    _expectKeys(object, expectedKeys, path);
     final levelValue = _expectNonEmptyString(object['level'], '$path.level');
     final level = switch (levelValue) {
       'beginner' => ProficiencyLevel.beginner,
       'advanced' => ProficiencyLevel.advanced,
       _ => throw FormatException('$path.level must be beginner or advanced.'),
     };
+    final topic = object.containsKey('topic')
+        ? _expectNonEmptyString(object['topic'], '$path.topic')
+        : '';
+    if (topic.isNotEmpty) {
+      final topicDefinition = TrainingTopics.conjugationById(topic);
+      if (topicDefinition == null || topicDefinition.level != level) {
+        throw FormatException(
+          '$path.topic must be a known topic applicable to its level.',
+        );
+      }
+    }
     final tense = _expectNonEmptyString(object['tense'], '$path.tense');
     if (tense != 'presentIndicative') {
       throw FormatException('$path.tense must be presentIndicative.');
@@ -156,6 +176,7 @@ class ConjugationEntry {
       id: _expectNonEmptyString(object['id'], '$path.id'),
       language: language,
       level: level,
+      topic: topic,
       infinitive: _expectNonEmptyString(
         object['infinitive'],
         '$path.infinitive',
@@ -169,6 +190,7 @@ class ConjugationEntry {
     'id': id,
     'language': language.id,
     'level': level.name,
+    'topic': topic,
     'infinitive': infinitive,
     'tense': tense,
     'subjects': subjects.map((subject) => subject.toJson()).toList(),
