@@ -1550,7 +1550,24 @@ class _ConjugationPracticeScreenState extends State<ConjugationPracticeScreen> {
                     ),
                     const SizedBox(height: 8),
                     Text(
+                      'Expected conjugation',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                    Text(
                       _prompt.subject.primary,
+                      key: const ValueKey('conjugation-expected-form'),
+                      style: Theme.of(context).textTheme.titleMedium
+                          ?.copyWith(fontSize: 20),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      'Infinitive translation '
+                      '(${_prompt.entry.language == ConjugationLanguage.german ? 'Portuguese' : 'German'})',
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
+                    Text(
+                      _prompt.entry.translation,
+                      key: const ValueKey('conjugation-infinitive-translation'),
                       style: Theme.of(context).textTheme.titleMedium
                           ?.copyWith(fontSize: 20),
                     ),

@@ -95,7 +95,7 @@ class SqliteTrainerStore implements TrainerStore {
     final directory = await getDatabasesPath();
     final database = await openDatabase(
       p.join(directory, 'vocabulary_trainer.db'),
-      version: 4,
+      version: 5,
       onCreate: (db, version) => createTables(db),
       onUpgrade: (db, oldVersion, newVersion) =>
           upgradeTables(db, oldVersion, newVersion),
@@ -159,6 +159,11 @@ class SqliteTrainerStore implements TrainerStore {
         "ALTER TABLE conjugations ADD COLUMN topic TEXT NOT NULL DEFAULT ''",
       );
     }
+    if (oldVersion < 5 && newVersion >= 5) {
+      await database.execute(
+        "ALTER TABLE conjugations ADD COLUMN translation TEXT NOT NULL DEFAULT ''",
+      );
+    }
   }
 
   static Future<void> _createConjugationTables(
@@ -171,6 +176,7 @@ class SqliteTrainerStore implements TrainerStore {
         level TEXT NOT NULL,
         topic TEXT NOT NULL DEFAULT '',
         infinitive TEXT NOT NULL,
+        translation TEXT NOT NULL,
         tense TEXT NOT NULL,
         subjects TEXT NOT NULL,
         active INTEGER NOT NULL
@@ -217,6 +223,9 @@ class SqliteTrainerStore implements TrainerStore {
       final hasConjugationTopics = conjugationColumns.any(
         (column) => column['name'] == 'topic',
       );
+      final hasConjugationTranslations = conjugationColumns.any(
+        (column) => column['name'] == 'translation',
+      );
 
       await transaction.update('vocabulary_entries', {'active': 0});
       for (final entry in dataset.entries) {
@@ -238,6 +247,7 @@ class SqliteTrainerStore implements TrainerStore {
       for (final entry in dataset.conjugations) {
         final values = _conjugationValues(entry)..['active'] = 1;
         if (!hasConjugationTopics) values.remove('topic');
+        if (!hasConjugationTranslations) values.remove('translation');
         await transaction.insert(
           'conjugations',
           values,
@@ -569,6 +579,7 @@ class SqliteTrainerStore implements TrainerStore {
     'level': entry.level.name,
     'topic': entry.topic,
     'infinitive': entry.infinitive,
+    'translation': entry.translation,
     'tense': entry.tense,
     'subjects': encodeConjugationSubjects(entry.subjects),
     'active': 1,
@@ -584,6 +595,7 @@ class SqliteTrainerStore implements TrainerStore {
         level: ProficiencyLevel.values.byName(row['level']! as String),
         topic: row['topic'] as String? ?? '',
         infinitive: row['infinitive']! as String,
+        translation: row['translation'] as String? ?? '',
         tense: row['tense']! as String,
         subjects: decodeConjugationSubjects(row['subjects']! as String),
       );

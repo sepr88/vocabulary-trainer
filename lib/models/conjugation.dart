@@ -94,6 +94,7 @@ class ConjugationEntry {
     required this.level,
     this.topic = '',
     required this.infinitive,
+    this.translation = '',
     required this.tense,
     required this.subjects,
   });
@@ -103,6 +104,7 @@ class ConjugationEntry {
   final ProficiencyLevel level;
   final String topic;
   final String infinitive;
+  final String translation;
   final String tense;
   final List<ConjugationSubject> subjects;
 
@@ -110,6 +112,7 @@ class ConjugationEntry {
     Object? value,
     String path, {
     bool requireTopic = false,
+    bool requireTranslation = false,
   }) {
     final object = _expectObject(value, path);
     final expectedKeys = <String>{
@@ -121,6 +124,7 @@ class ConjugationEntry {
       'subjects',
     };
     if (requireTopic) expectedKeys.add('topic');
+    if (requireTranslation) expectedKeys.add('translation');
     _expectKeys(object, expectedKeys, path);
     final levelValue = _expectNonEmptyString(object['level'], '$path.level');
     final level = switch (levelValue) {
@@ -165,6 +169,9 @@ class ConjugationEntry {
       _expectNonEmptyString(object['language'], '$path.language'),
       '$path.language',
     );
+    final translation = requireTranslation || object.containsKey('translation')
+        ? _expectNonEmptyString(object['translation'], '$path.translation')
+        : '';
     if (!subjectIds.containsAll(language.subjectIds) ||
         subjectIds.length != language.subjectIds.length) {
       throw FormatException(
@@ -181,6 +188,7 @@ class ConjugationEntry {
         object['infinitive'],
         '$path.infinitive',
       ),
+      translation: translation,
       tense: tense,
       subjects: List.unmodifiable(subjects),
     );
@@ -192,6 +200,7 @@ class ConjugationEntry {
     'level': level.name,
     'topic': topic,
     'infinitive': infinitive,
+    'translation': translation,
     'tense': tense,
     'subjects': subjects.map((subject) => subject.toJson()).toList(),
   };
