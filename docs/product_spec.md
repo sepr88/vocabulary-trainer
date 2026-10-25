@@ -52,6 +52,8 @@
 - **PRD-041:** The progress overview displays conjugation prompts practiced, correct answers, incorrect answers, and accuracy as separate metrics for each language and proficiency level. These are cumulative across conjugation sessions. Accuracy is the number of correct answers divided by the number of prompts practiced, expressed as a percentage; it is 0% when no prompts have been practiced. A revealed answer counts as incorrect, as specified in PRD-039.
 - **PRD-042:** A unique conjugation prompt is the combination of a conjugation record and one of its subject forms. A prompt counts as answered correctly if it has at least one correct attempt, and as answered incorrectly if it has at least one incorrect attempt. It may count toward both totals.
 - **PRD-043:** Conjugation results do not contribute to vocabulary practice totals or unique-entry metrics in PRD-010 and PRD-021, and do not affect vocabulary session selection under PRD-032. The app displays conjugation progress separately from vocabulary progress.
+- **PRD-044:** German conjugation prompts use the subject forms `ich`, `du`, `er/sie/es`, `wir`, `ihr`, and `sie/Sie`. European Portuguese prompts use `eu`, `tu`, `ele/ela/você`, `nós`, and `vocês/eles/elas`.
+- **PRD-045:** A conjugation session includes every verb-subject combination for the selected language and proficiency level exactly once. The session order may be randomized.
 
 ## Availability and empty state
 
@@ -70,7 +72,6 @@ Keep the experience simple, intuitive, fast to start, focused, consistent, acces
 ## Open product decisions
 
 - **OPD-001:** What vocabulary expansion scope, content targets, and release timeline should the product use?
-- **OPD-002:** Should the app include a conjugation trainer? If so, which languages, tenses, and proficiency levels should it support?
 - **OPD-003:** Should users be able to reset their training history and progress? If so, what confirmation or recovery safeguards should apply?
 - **OPD-005:** Should users be able to review words they answered incorrectly? If so, how should that review relate to regular practice sessions?
 - **OPD-006:** Should vocabulary entries be grouped into topics such as food, travel, and hotels, and should users be able to choose a topic for a practice session?

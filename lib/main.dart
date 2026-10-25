@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 
 import 'data/bootstrap.dart';
 import 'data/trainer_store.dart';
+import 'domain/conjugation_session.dart';
 import 'domain/practice_session.dart';
+import 'models/conjugation.dart';
 import 'models/vocabulary.dart';
 
 void main() {
@@ -220,6 +222,8 @@ class _HomeScreenState extends State<HomeScreen> {
   List<VocabularyEntry> _entries = const [];
   Map<String, PracticeHistory> _practiceHistory = const {};
   ProgressSnapshot? _progress;
+  Map<ConjugationProgressKey, ConjugationProgress> _conjugationProgress =
+      const {};
   int? _vocabularyVersion;
   Object? _loadError;
   bool _loading = true;
@@ -239,12 +243,14 @@ class _HomeScreenState extends State<HomeScreen> {
       final entries = await widget.store.activeEntries();
       final practiceHistory = await widget.store.practiceHistory();
       final progress = await widget.store.progress();
+      final conjugationProgress = await widget.store.conjugationProgress();
       final vocabularyVersion = await widget.store.activeVocabularyVersion();
       if (!mounted) return;
       setState(() {
         _entries = entries;
         _practiceHistory = practiceHistory;
         _progress = progress;
+        _conjugationProgress = conjugationProgress;
         _vocabularyVersion = vocabularyVersion;
         _loading = false;
       });
@@ -265,6 +271,15 @@ class _HomeScreenState extends State<HomeScreen> {
           entries: _entries,
           practiceHistory: _practiceHistory,
         ),
+      ),
+    );
+    if (mounted) await _load();
+  }
+
+  Future<void> _startConjugationPractice() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (context) => ConjugationSetupScreen(store: widget.store),
       ),
     );
     if (mounted) await _load();
@@ -306,13 +321,18 @@ class _HomeScreenState extends State<HomeScreen> {
                           const _EmptyVocabularyCard()
                         else
                           _PracticeCallout(onStart: _startPractice),
+                        const SizedBox(height: 12),
+                        _ConjugationCallout(onStart: _startConjugationPractice),
                         const SizedBox(height: 28),
                         Text(
                           'Your learning',
                           style: Theme.of(context).textTheme.titleLarge,
                         ),
                         const SizedBox(height: 14),
-                        _ProgressOverview(progress: _progress!),
+                        _ProgressOverview(
+                          progress: _progress!,
+                          conjugationProgress: _conjugationProgress,
+                        ),
                       ],
                     ),
                   ),
@@ -327,6 +347,24 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
+    );
+  }
+}
+
+class _ConjugationCallout extends StatelessWidget {
+  const _ConjugationCallout({required this.onStart});
+
+  final VoidCallback onStart;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: onStart,
+        icon: const Icon(Icons.text_fields_rounded),
+        label: const Text('Practice conjugation'),
+      ),
     );
   }
 }
@@ -455,9 +493,13 @@ class _EmptyVocabularyCard extends StatelessWidget {
 }
 
 class _ProgressOverview extends StatelessWidget {
-  const _ProgressOverview({required this.progress});
+  const _ProgressOverview({
+    required this.progress,
+    required this.conjugationProgress,
+  });
 
   final ProgressSnapshot progress;
+  final Map<ConjugationProgressKey, ConjugationProgress> conjugationProgress;
 
   @override
   Widget build(BuildContext context) {
@@ -477,29 +519,118 @@ class _ProgressOverview extends StatelessWidget {
         Icons.history_rounded,
       ),
     ];
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final columns = constraints.maxWidth >= 500 ? 3 : 2;
-        const spacing = 12.0;
-        final tileWidth =
-            (constraints.maxWidth - spacing * (columns - 1)) / columns;
-        return Wrap(
-          spacing: spacing,
-          runSpacing: spacing,
-          children: [
-            for (final metric in metrics)
-              SizedBox(
-                width: tileWidth,
-                height: 118,
-                child: _ProgressTile(
-                  label: metric.$1,
-                  value: metric.$2,
-                  icon: metric.$3,
-                ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        LayoutBuilder(
+          builder: (context, constraints) {
+            final columns = constraints.maxWidth >= 500 ? 3 : 2;
+            const spacing = 12.0;
+            final tileWidth =
+                (constraints.maxWidth - spacing * (columns - 1)) / columns;
+            return Wrap(
+              spacing: spacing,
+              runSpacing: spacing,
+              children: [
+                for (final metric in metrics)
+                  SizedBox(
+                    width: tileWidth,
+                    height: 118,
+                    child: _ProgressTile(
+                      label: metric.$1,
+                      value: metric.$2,
+                      icon: metric.$3,
+                    ),
+                  ),
+              ],
+            );
+          },
+        ),
+        const SizedBox(height: 28),
+        Text(
+          'Conjugation progress',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 12),
+        for (final language in ConjugationLanguage.values)
+          for (final level in ProficiencyLevel.values)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: _ConjugationProgressCard(
+                language: language,
+                level: level,
+                progress:
+                    conjugationProgress[ConjugationProgressKey(
+                      language,
+                      level,
+                    )] ??
+                    const ConjugationProgress(
+                      promptsPracticed: 0,
+                      correctAnswers: 0,
+                      incorrectAnswers: 0,
+                      uniquePromptsCorrect: 0,
+                      uniquePromptsIncorrect: 0,
+                    ),
               ),
+            ),
+      ],
+    );
+  }
+}
+
+class _ConjugationProgressCard extends StatelessWidget {
+  const _ConjugationProgressCard({
+    required this.language,
+    required this.level,
+    required this.progress,
+  });
+
+  final ConjugationLanguage language;
+  final ProficiencyLevel level;
+  final ConjugationProgress progress;
+
+  @override
+  Widget build(BuildContext context) {
+    final metrics = <(String, String)>[
+      ('Practiced', '${progress.promptsPracticed}'),
+      ('Correct', '${progress.correctAnswers}'),
+      ('Incorrect', '${progress.incorrectAnswers}'),
+      ('Accuracy', '${progress.accuracyPercent.toStringAsFixed(0)}%'),
+    ];
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '${language.displayName} · ${level.name}',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                for (final metric in metrics)
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          metric.$2,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        Text(
+                          metric.$1,
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
           ],
-        );
-      },
+        ),
+      ),
     );
   }
 }
@@ -886,6 +1017,493 @@ class _PracticeScreenState extends State<PracticeScreen> {
               ),
             ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+class ConjugationSetupScreen extends StatefulWidget {
+  const ConjugationSetupScreen({super.key, required this.store});
+
+  final TrainerStore store;
+
+  @override
+  State<ConjugationSetupScreen> createState() => _ConjugationSetupScreenState();
+}
+
+class _ConjugationSetupScreenState extends State<ConjugationSetupScreen> {
+  ConjugationLanguage _language = ConjugationLanguage.german;
+  ProficiencyLevel _level = ProficiencyLevel.beginner;
+  List<ConjugationEntry> _entries = const [];
+  Object? _loadError;
+  bool _loading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    setState(() {
+      _loading = true;
+      _loadError = null;
+    });
+    try {
+      final entries = await widget.store.activeConjugations();
+      if (!mounted) return;
+      setState(() {
+        _entries = entries;
+        _loading = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _loadError = error;
+        _loading = false;
+      });
+    }
+  }
+
+  void _start() {
+    final session = ConjugationSession.create(
+      _entries,
+      language: _language,
+      level: _level,
+    );
+    Navigator.of(context).pushReplacement<void, void>(
+      MaterialPageRoute<void>(
+        builder: (context) =>
+            ConjugationPracticeScreen(store: widget.store, session: session),
+      ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_loading) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Conjugation practice')),
+        body: const Center(child: CircularProgressIndicator()),
+      );
+    }
+    if (_loadError != null) {
+      return Scaffold(
+        appBar: AppBar(title: const Text('Conjugation practice')),
+        body: _ErrorPanel(
+          icon: Icons.folder_off_rounded,
+          title: 'Conjugation practice is unavailable',
+          message: 'We could not read the bundled conjugation data.',
+          details: '$_loadError',
+          actionLabel: 'Try again',
+          onRetry: _load,
+        ),
+      );
+    }
+    final selectedCount = _entries
+        .where((entry) => entry.language == _language && entry.level == _level)
+        .fold<int>(0, (count, entry) => count + entry.subjects.length);
+    return Scaffold(
+      appBar: AppBar(title: const Text('Conjugation practice')),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+        children: [
+          Text(
+            'Choose your practice',
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          const SizedBox(height: 24),
+          Text('Language', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 10),
+          SegmentedButton<ConjugationLanguage>(
+            segments: [
+              for (final language in ConjugationLanguage.values)
+                ButtonSegment(
+                  value: language,
+                  label: Text(
+                    language == ConjugationLanguage.german
+                        ? 'German'
+                        : 'European Portuguese',
+                  ),
+                ),
+            ],
+            selected: {_language},
+            onSelectionChanged: (selection) {
+              setState(() => _language = selection.single);
+            },
+          ),
+          const SizedBox(height: 24),
+          Text('Level', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 10),
+          SegmentedButton<ProficiencyLevel>(
+            segments: const [
+              ButtonSegment(
+                value: ProficiencyLevel.beginner,
+                label: Text('Beginner'),
+              ),
+              ButtonSegment(
+                value: ProficiencyLevel.advanced,
+                label: Text('Advanced'),
+              ),
+            ],
+            selected: {_level},
+            onSelectionChanged: (selection) {
+              setState(() => _level = selection.single);
+            },
+          ),
+          const SizedBox(height: 24),
+          Text(
+            'Each session practices every verb and subject form once.',
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+          const SizedBox(height: 20),
+          FilledButton.icon(
+            onPressed: selectedCount == 0 ? null : _start,
+            icon: const Icon(Icons.play_arrow_rounded),
+            label: Text(
+              selectedCount == 0
+                  ? 'No conjugations available'
+                  : 'Start session ($selectedCount prompts)',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class ConjugationPracticeScreen extends StatefulWidget {
+  const ConjugationPracticeScreen({
+    super.key,
+    required this.store,
+    required this.session,
+  });
+
+  final TrainerStore store;
+  final ConjugationSession session;
+
+  @override
+  State<ConjugationPracticeScreen> createState() =>
+      _ConjugationPracticeScreenState();
+}
+
+class _ConjugationPracticeScreenState extends State<ConjugationPracticeScreen> {
+  final TextEditingController _answerController = TextEditingController();
+  int _index = 0;
+  bool? _correct;
+  bool _revealed = false;
+  bool _saving = false;
+  Object? _saveError;
+
+  ConjugationPrompt get _prompt => widget.session.prompts[_index];
+  bool get _completed => _correct != null;
+
+  @override
+  void dispose() {
+    _answerController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _complete(bool correct, {bool revealed = false}) async {
+    if (_completed || _saving) return;
+    setState(() {
+      _saving = true;
+      _saveError = null;
+    });
+    try {
+      final recorded = await widget.store.recordConjugationAttempt(
+        attemptId: _prompt.attemptId,
+        conjugationId: _prompt.entry.id,
+        subjectId: _prompt.subject.id,
+        correct: correct,
+      );
+      if (!recorded) {
+        throw StateError('This conjugation prompt has already been recorded.');
+      }
+      widget.session.completePrompt(_index, correct: correct);
+      if (!mounted) return;
+      setState(() {
+        _correct = correct;
+        _revealed = revealed;
+        _saving = false;
+      });
+    } catch (error) {
+      if (!mounted) return;
+      setState(() {
+        _saveError = error;
+        _saving = false;
+      });
+    }
+  }
+
+  void _advance() {
+    if (_index + 1 == widget.session.prompts.length) {
+      Navigator.of(context).pushReplacement<void, void>(
+        MaterialPageRoute<void>(
+          builder: (context) =>
+              ConjugationSummaryScreen(summary: widget.session.summary),
+        ),
+      );
+      return;
+    }
+    setState(() {
+      _index++;
+      _correct = null;
+      _revealed = false;
+      _saveError = null;
+      _answerController.clear();
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final questionNumber = _index + 1;
+    final questionCount = widget.session.prompts.length;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Conjugation practice')),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 32),
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Prompt $questionNumber of $questionCount',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              Text(
+                '${((questionNumber / questionCount) * 100).round()}%',
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: LinearProgressIndicator(
+              value: questionNumber / questionCount,
+              minHeight: 9,
+              backgroundColor: colorScheme.primaryContainer,
+            ),
+          ),
+          const SizedBox(height: 28),
+          Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              color: colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Conjugate in the present indicative',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  _prompt.entry.infinitive,
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  _prompt.subject.id,
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 18),
+          if (!_completed) ...[
+            TextField(
+              key: const ValueKey('conjugation-answer'),
+              controller: _answerController,
+              enabled: !_saving,
+              onChanged: (_) => setState(() {}),
+              textInputAction: TextInputAction.done,
+              onSubmitted: (_) {
+                if (_answerController.text.trim().isNotEmpty) {
+                  _complete(_prompt.matches(_answerController.text));
+                }
+              },
+              decoration: const InputDecoration(
+                labelText: 'Conjugated form',
+                hintText: 'Type your answer',
+                prefixIcon: Icon(Icons.edit_rounded),
+              ),
+            ),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _saving || _answerController.text.trim().isEmpty
+                    ? null
+                    : () => _complete(_prompt.matches(_answerController.text)),
+                icon: _saving
+                    ? const SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.check_rounded),
+                label: Text(_saving ? 'Saving answer' : 'Check answer'),
+              ),
+            ),
+            const SizedBox(height: 8),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _saving
+                    ? null
+                    : () => _complete(false, revealed: true),
+                icon: const Icon(Icons.lightbulb_outline_rounded),
+                label: const Text('Reveal answer'),
+              ),
+            ),
+          ] else ...[
+            Card(
+              color: _correct!
+                  ? colorScheme.primaryContainer
+                  : colorScheme.errorContainer,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      _revealed
+                          ? 'Marked incorrect'
+                          : _correct!
+                          ? 'Correct'
+                          : 'Incorrect',
+                      style: Theme.of(context).textTheme.titleLarge,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      _prompt.subject.primary,
+                      style: Theme.of(context).textTheme.titleMedium
+                          ?.copyWith(fontSize: 20),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: FilledButton.icon(
+                onPressed: _advance,
+                icon: const Icon(Icons.arrow_forward_rounded),
+                label: Text(
+                  questionNumber == questionCount ? 'Finish session' : 'Next',
+                ),
+              ),
+            ),
+          ],
+          if (_saveError != null) ...[
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: colorScheme.errorContainer,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: Text(
+                'Could not save this result: $_saveError',
+                style: TextStyle(
+                  color: colorScheme.onErrorContainer,
+                  fontSize: 16,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class ConjugationSummaryScreen extends StatelessWidget {
+  const ConjugationSummaryScreen({super.key, required this.summary});
+
+  final SessionSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    return Scaffold(
+      appBar: AppBar(title: const Text('Conjugation summary')),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(24, 24, 24, 32),
+        children: [
+          Text(
+            'Conjugation session complete',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              color: colorScheme.primaryContainer,
+              borderRadius: BorderRadius.circular(24),
+            ),
+            child: Column(
+              children: [
+                Text(
+                  'Accuracy',
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${summary.accuracyPercent.toStringAsFixed(0)}%',
+                  style: Theme.of(context).textTheme.headlineMedium
+                      ?.copyWith(color: colorScheme.primary, fontSize: 48),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _SummaryMetric(
+                  label: 'Prompts practiced',
+                  value: summary.practiced,
+                  icon: Icons.repeat_rounded,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _SummaryMetric(
+                  label: 'Correct',
+                  value: summary.correct,
+                  icon: Icons.check_circle_rounded,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _SummaryMetric(
+                  label: 'Incorrect',
+                  value: summary.incorrect,
+                  icon: Icons.replay_rounded,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: () =>
+                  Navigator.of(context).popUntil((route) => route.isFirst),
+              icon: const Icon(Icons.done_rounded),
+              label: const Text('Done'),
+            ),
+          ),
         ],
       ),
     );

@@ -1,6 +1,9 @@
 import 'dart:convert';
 
-enum ProficiencyLevel { beginner, advanced }
+import 'conjugation.dart';
+import 'proficiency_level.dart';
+
+export 'proficiency_level.dart';
 
 class LanguageForm {
   const LanguageForm({required this.primary, required this.accepted});
@@ -85,15 +88,20 @@ class VocabularyEntry {
 }
 
 class VocabularyDataset {
-  const VocabularyDataset({required this.version, required this.entries});
+  const VocabularyDataset({
+    required this.version,
+    required this.entries,
+    this.conjugations = const [],
+  });
 
   final int version;
   final List<VocabularyEntry> entries;
+  final List<ConjugationEntry> conjugations;
 
   static VocabularyDataset fromJsonString(String source) {
     final decoded = jsonDecode(source);
     final object = _expectObject(decoded, r'$');
-    _expectKeys(object, const {'version', 'entries'}, r'$');
+    _expectKeys(object, const {'version', 'entries', 'conjugations'}, r'$');
     final version = object['version'];
     if (version is! int || version <= 0) {
       throw const FormatException(r'$.version must be a positive integer.');
@@ -115,9 +123,27 @@ class VocabularyDataset {
       }
       entries.add(entry);
     }
+    final rawConjugations = object['conjugations'];
+    if (rawConjugations is! List<Object?>) {
+      throw const FormatException(r'$.conjugations must be an array.');
+    }
+    final conjugations = <ConjugationEntry>[];
+    final conjugationIds = <String>{};
+    for (var index = 0; index < rawConjugations.length; index++) {
+      final conjugation = ConjugationEntry.fromJson(
+        rawConjugations[index],
+        r'$.conjugations['
+        '$index]',
+      );
+      if (!conjugationIds.add(conjugation.id)) {
+        throw FormatException('Duplicate conjugation ID "${conjugation.id}".');
+      }
+      conjugations.add(conjugation);
+    }
     return VocabularyDataset(
       version: version,
       entries: List.unmodifiable(entries),
+      conjugations: List.unmodifiable(conjugations),
     );
   }
 }

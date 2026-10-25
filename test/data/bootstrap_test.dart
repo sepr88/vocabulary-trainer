@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:vocabulary_trainer/data/bootstrap.dart';
 import 'package:vocabulary_trainer/data/trainer_store.dart';
 import 'package:vocabulary_trainer/domain/practice_session.dart';
+import 'package:vocabulary_trainer/models/conjugation.dart';
 import 'package:vocabulary_trainer/models/vocabulary.dart';
 
 void main() {
@@ -31,7 +32,10 @@ void main() {
     () async {
       var opened = false;
 
-      for (final source in [_bundle(1), '{"version":0,"entries":[]}']) {
+      for (final source in [
+        _bundle(1),
+        '{"version":0,"entries":[],"conjugations":[]}',
+      ]) {
         await expectLater(
           initializeTrainerStore(
             loadAsset: (_) async => source,
@@ -47,6 +51,39 @@ void main() {
       expect(opened, isFalse);
     },
   );
+
+  test(
+    'rejects insufficient conjugation coverage before opening storage',
+    () async {
+      var opened = false;
+      await expectLater(
+        initializeTrainerStore(
+          loadAsset: (_) async => _bundle(100, conjugationsPerGroup: 9),
+          openStore: () async {
+            opened = true;
+            return _RecordingStore();
+          },
+        ),
+        throwsFormatException,
+      );
+      expect(opened, isFalse);
+    },
+  );
+
+  test('rejects duplicate verbs in conjugation coverage', () async {
+    var opened = false;
+    await expectLater(
+      initializeTrainerStore(
+        loadAsset: (_) async => _bundle(100, duplicateVerbNames: true),
+        openStore: () async {
+          opened = true;
+          return _RecordingStore();
+        },
+      ),
+      throwsFormatException,
+    );
+    expect(opened, isFalse);
+  });
 
   test('closes the store and preserves the reconciliation failure', () async {
     final failure = StateError('reconciliation failed');
@@ -64,7 +101,11 @@ void main() {
   });
 }
 
-String _bundle(int count) => jsonEncode({
+String _bundle(
+  int count, {
+  int conjugationsPerGroup = 10,
+  bool duplicateVerbNames = false,
+}) => jsonEncode({
   'version': 1,
   'entries': [
     for (var index = 0; index < count; index++)
@@ -84,6 +125,26 @@ String _bundle(int count) => jsonEncode({
           'pt-PT': 'A casa é importante.',
         },
       },
+  ],
+  'conjugations': [
+    for (final language in ConjugationLanguage.values)
+      for (final level in ProficiencyLevel.values)
+        for (var index = 0; index < conjugationsPerGroup; index++)
+          {
+            'id': '${language.id}-${level.name}-$index',
+            'language': language.id,
+            'level': level.name,
+            'infinitive': 'verb-${duplicateVerbNames ? 0 : index}',
+            'tense': 'presentIndicative',
+            'subjects': [
+              for (final subject in language.subjectIds)
+                {
+                  'id': subject,
+                  'primary': 'form',
+                  'accepted': ['form'],
+                },
+            ],
+          },
   ],
 });
 
@@ -119,9 +180,24 @@ class _RecordingStore implements TrainerStore {
   );
 
   @override
+  Future<List<ConjugationEntry>> activeConjugations() async => const [];
+
+  @override
+  Future<Map<ConjugationProgressKey, ConjugationProgress>>
+  conjugationProgress() async => const {};
+
+  @override
   Future<bool> recordAttempt({
     required String attemptId,
     required String entryId,
+    required bool correct,
+  }) async => true;
+
+  @override
+  Future<bool> recordConjugationAttempt({
+    required String attemptId,
+    required String conjugationId,
+    required String subjectId,
     required bool correct,
   }) async => true;
 
