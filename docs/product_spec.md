@@ -54,6 +54,8 @@
 - **PRD-043:** Conjugation results do not contribute to vocabulary practice totals or unique-entry metrics in PRD-010 and PRD-021, and do not affect vocabulary session selection under PRD-032. The app displays conjugation progress separately from vocabulary progress.
 - **PRD-044:** German conjugation prompts use the subject forms `ich`, `du`, `er/sie/es`, `wir`, `ihr`, and `sie/Sie`. European Portuguese prompts use `eu`, `tu`, `ele/ela/você`, `nós`, and `vocês/eles/elas`.
 - **PRD-045:** A conjugation session includes every verb-subject combination for the selected language and proficiency level exactly once. The session order may be randomized.
+- **PRD-046:** After a conjugation exercise starts, the exercise screen provides a tappable help control. Activating it opens a separate grammar-reference screen for the language selected for that exercise. The reference screen does not offer content for the other language. Returning to the exercise preserves the current prompt and session progress.
+- **PRD-047:** The grammar-reference screen explains present-indicative regular conjugation for the selected language and shows complete conjugation forms using that language’s supported subject forms. It includes an example regular German verb, or one regular European Portuguese verb from each `-ar`, `-er`, and `-ir` class. It also shows complete present-indicative forms for at least three common irregular verbs in the selected language: German `sein`, `haben`, and `werden`; or European Portuguese `ser`, `estar`, and `ir`.
 
 ## Availability and empty state
 
