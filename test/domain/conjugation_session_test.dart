@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vocabulary_trainer/domain/adaptive_selection.dart';
 import 'package:vocabulary_trainer/domain/conjugation_session.dart';
 import 'package:vocabulary_trainer/models/conjugation.dart';
 import 'package:vocabulary_trainer/models/vocabulary.dart';
@@ -45,6 +46,69 @@ void main() {
     expect(session.prompts.map((prompt) => prompt.attemptId).toSet().length, 4);
   });
 
+  test('weights matching prompts and caps sessions at 15 without repeats', () {
+    final entries = [
+      for (var index = 0; index < 8; index++)
+        sampleConjugation(
+          id: 'de-beginner-$index',
+          subjects: const [
+            ConjugationSubject(
+              id: 'ich',
+              primary: 'lerne',
+              accepted: ['lerne'],
+            ),
+            ConjugationSubject(
+              id: 'du',
+              primary: 'lernst',
+              accepted: ['lernst'],
+            ),
+          ],
+        ),
+      sampleConjugation(
+        id: 'pt-PT-beginner',
+        language: ConjugationLanguage.portuguese,
+      ),
+      sampleConjugation(id: 'de-advanced', level: ProficiencyLevel.advanced),
+    ];
+    final now = DateTime.utc(2026, 10, 25);
+    final history = SelectionHistory.fromAttempts(
+      List.generate(
+        5,
+        (index) => SelectionAttempt(
+          correct: false,
+          completedAt: now.subtract(Duration(minutes: index)),
+        ),
+      ),
+    );
+    final session = ConjugationSession.create(
+      entries,
+      language: ConjugationLanguage.german,
+      level: ProficiencyLevel.beginner,
+      practiceHistory: {
+        const ConjugationPromptKey('de-beginner-0', 'ich'): history,
+      },
+      random: _ScriptedRandom([0.1]),
+      now: now,
+    );
+
+    expect(session.prompts, hasLength(15));
+    expect(
+      session.prompts
+          .map((prompt) => '${prompt.entry.id}:${prompt.subject.id}')
+          .toSet(),
+      hasLength(15),
+    );
+    expect(session.prompts.first.entry.id, 'de-beginner-0');
+    expect(
+      session.prompts.every(
+        (prompt) =>
+            prompt.entry.language == ConjugationLanguage.german &&
+            prompt.entry.level == ProficiencyLevel.beginner,
+      ),
+      isTrue,
+    );
+  });
+
   test('matches whitespace and case but preserves diacritic distinctions', () {
     final portuguese = sampleConjugation(
       id: 'pt-PT-beginner-ser',
@@ -79,4 +143,23 @@ void main() {
     expect(session.summary.correct, 1);
     expect(session.summary.incorrect, 0);
   });
+}
+
+class _ScriptedRandom implements Random {
+  _ScriptedRandom(this._draws);
+
+  final List<double> _draws;
+  var _drawIndex = 0;
+
+  @override
+  int nextInt(int max) => 0;
+
+  @override
+  bool nextBool() => false;
+
+  @override
+  double nextDouble() {
+    if (_drawIndex < _draws.length) return _draws[_drawIndex++];
+    return 0;
+  }
 }

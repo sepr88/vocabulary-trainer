@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vocabulary_trainer/data/bootstrap.dart';
 import 'package:vocabulary_trainer/data/trainer_store.dart';
-import 'package:vocabulary_trainer/domain/practice_session.dart';
+import 'package:vocabulary_trainer/domain/adaptive_selection.dart';
+import 'package:vocabulary_trainer/domain/conjugation_session.dart';
 import 'package:vocabulary_trainer/models/conjugation.dart';
 import 'package:vocabulary_trainer/models/vocabulary.dart';
 
@@ -162,7 +163,12 @@ class _RecordingStore implements TrainerStore {
   Future<int> activeVocabularyVersion() async => 1;
 
   @override
-  Future<Map<String, PracticeHistory>> practiceHistory() async => const {};
+  Future<Map<String, SelectionHistory>> vocabularySelectionHistory() async =>
+      const {};
+
+  @override
+  Future<Map<ConjugationPromptKey, SelectionHistory>>
+  conjugationSelectionHistory() async => const {};
 
   @override
   Future<void> close() async {

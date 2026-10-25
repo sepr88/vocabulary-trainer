@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:vocabulary_trainer/domain/adaptive_selection.dart';
 import 'package:vocabulary_trainer/domain/practice_session.dart';
 
 import '../support/fixtures.dart';
@@ -69,27 +70,51 @@ void main() {
     expect(session.completedCount, 1);
   });
 
-  test('uses the configured bounded selection weight', () {
+  test('uses accuracy, recent mistakes, and elapsed days in the weight', () {
+    final now = DateTime.utc(2026, 10, 25);
+    expect(SelectionHistory.empty.selectionWeight(now: now), 5);
     expect(
-      const PracticeHistory(
-        completedAttempts: 0,
-        incorrectAttempts: 0,
-      ).selectionWeight,
-      4,
+      SelectionHistory.fromAttempts([
+        SelectionAttempt(correct: false, completedAt: now),
+        SelectionAttempt(
+          correct: false,
+          completedAt: now.subtract(const Duration(days: 1)),
+        ),
+        SelectionAttempt(
+          correct: true,
+          completedAt: now.subtract(const Duration(days: 2)),
+        ),
+        SelectionAttempt(
+          correct: true,
+          completedAt: now.subtract(const Duration(days: 3)),
+        ),
+        SelectionAttempt(
+          correct: true,
+          completedAt: now.subtract(const Duration(days: 4)),
+        ),
+        SelectionAttempt(
+          correct: false,
+          completedAt: now.subtract(const Duration(days: 5)),
+        ),
+        SelectionAttempt(
+          correct: false,
+          completedAt: now.subtract(const Duration(days: 6)),
+        ),
+        SelectionAttempt(
+          correct: false,
+          completedAt: now.subtract(const Duration(days: 7)),
+        ),
+      ]).selectionWeight(now: now),
+      closeTo(1 + 4 * (1 - 3 / 8) + 4, 0.0001),
     );
     expect(
-      const PracticeHistory(
-        completedAttempts: 3,
-        incorrectAttempts: 0,
-      ).selectionWeight,
-      1,
-    );
-    expect(
-      const PracticeHistory(
-        completedAttempts: 10,
-        incorrectAttempts: 8,
-      ).selectionWeight,
-      4,
+      SelectionHistory.fromAttempts([
+        SelectionAttempt(
+          correct: true,
+          completedAt: now.subtract(const Duration(days: 2)),
+        ),
+      ]).selectionWeight(now: now),
+      closeTo(1 + 2 / 7, 0.0001),
     );
   });
 
@@ -102,24 +127,32 @@ void main() {
         ...List.generate(14, (index) => sampleEntry(id: 'other-$index')),
       ];
       final history = {
-        'well-practiced': const PracticeHistory(
-          completedAttempts: 3,
-          incorrectAttempts: 0,
+        'well-practiced': SelectionHistory.fromAttempts(
+          List.filled(
+            5,
+            SelectionAttempt(
+              correct: true,
+              completedAt: DateTime.utc(2026, 10, 25),
+            ),
+          ),
         ),
-        'often-missed': const PracticeHistory(
-          completedAttempts: 3,
-          incorrectAttempts: 3,
+        'often-missed': SelectionHistory.fromAttempts(
+          List.filled(
+            5,
+            SelectionAttempt(
+              correct: false,
+              completedAt: DateTime.utc(2026, 10, 25),
+            ),
+          ),
         ),
         for (var index = 0; index < 14; index++)
-          'other-$index': const PracticeHistory(
-            completedAttempts: 3,
-            incorrectAttempts: 0,
-          ),
+          'other-$index': SelectionHistory.empty,
       };
       final session = PracticeSession.create(
         entries,
         practiceHistory: history,
         random: _ScriptedRandom([0.1]),
+        now: DateTime.utc(2026, 10, 25),
       );
 
       final selectedIds = session.items.map((item) => item.entry.id).toList();
@@ -138,10 +171,12 @@ void main() {
       entries,
       practiceHistory: {
         for (final entry in entries)
-          entry.id: const PracticeHistory(
-            completedAttempts: 100,
-            incorrectAttempts: 0,
-          ),
+          entry.id: SelectionHistory.fromAttempts([
+            SelectionAttempt(
+              correct: true,
+              completedAt: DateTime.utc(2026, 10, 25),
+            ),
+          ]),
       },
       random: Random(19),
     );

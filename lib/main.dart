@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 
 import 'data/bootstrap.dart';
 import 'data/trainer_store.dart';
+import 'domain/adaptive_selection.dart';
 import 'domain/conjugation_session.dart';
 import 'domain/practice_session.dart';
 import 'models/conjugation.dart';
@@ -222,7 +223,7 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   List<VocabularyEntry> _entries = const [];
-  Map<String, PracticeHistory> _practiceHistory = const {};
+  Map<String, SelectionHistory> _practiceHistory = const {};
   ProgressSnapshot? _progress;
   Map<ConjugationProgressKey, ConjugationProgress> _conjugationProgress =
       const {};
@@ -243,7 +244,7 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     try {
       final entries = await widget.store.activeEntries();
-      final practiceHistory = await widget.store.practiceHistory();
+      final practiceHistory = await widget.store.vocabularySelectionHistory();
       final progress = await widget.store.progress();
       final conjugationProgress = await widget.store.conjugationProgress();
       final vocabularyVersion = await widget.store.activeVocabularyVersion();
@@ -686,7 +687,7 @@ class PracticeScreen extends StatefulWidget {
     super.key,
     required this.store,
     required List<VocabularyEntry> entries,
-    Map<String, PracticeHistory> practiceHistory = const {},
+    Map<String, SelectionHistory> practiceHistory = const {},
     Random? random,
   }) : session = PracticeSession.create(
          entries,
@@ -1038,6 +1039,7 @@ class _ConjugationSetupScreenState extends State<ConjugationSetupScreen> {
   ConjugationLanguage _language = ConjugationLanguage.german;
   ProficiencyLevel _level = ProficiencyLevel.beginner;
   List<ConjugationEntry> _entries = const [];
+  Map<ConjugationPromptKey, SelectionHistory> _practiceHistory = const {};
   Object? _loadError;
   bool _loading = true;
 
@@ -1054,9 +1056,11 @@ class _ConjugationSetupScreenState extends State<ConjugationSetupScreen> {
     });
     try {
       final entries = await widget.store.activeConjugations();
+      final practiceHistory = await widget.store.conjugationSelectionHistory();
       if (!mounted) return;
       setState(() {
         _entries = entries;
+        _practiceHistory = practiceHistory;
         _loading = false;
       });
     } catch (error) {
@@ -1073,6 +1077,7 @@ class _ConjugationSetupScreenState extends State<ConjugationSetupScreen> {
       _entries,
       language: _language,
       level: _level,
+      practiceHistory: _practiceHistory,
     );
     Navigator.of(context).pushReplacement<void, void>(
       MaterialPageRoute<void>(
@@ -1096,7 +1101,7 @@ class _ConjugationSetupScreenState extends State<ConjugationSetupScreen> {
         body: _ErrorPanel(
           icon: Icons.folder_off_rounded,
           title: 'Conjugation practice is unavailable',
-          message: 'We could not read the bundled conjugation data.',
+          message: 'We could not load the conjugation data or attempt history.',
           details: '$_loadError',
           actionLabel: 'Try again',
           onRetry: _load,

@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:vocabulary_trainer/data/trainer_store.dart';
-import 'package:vocabulary_trainer/domain/practice_session.dart';
+import 'package:vocabulary_trainer/domain/conjugation_session.dart';
 import 'package:vocabulary_trainer/models/conjugation.dart';
 import 'package:vocabulary_trainer/models/vocabulary.dart';
 
@@ -31,7 +31,7 @@ void main() {
 
       expect(await store.activeEntries(), hasLength(1));
       expect(await store.activeVocabularyVersion(), 1);
-      expect(await store.practiceHistory(), isEmpty);
+      expect(await store.vocabularySelectionHistory(), isEmpty);
       expect(
         await store.recordAttempt(
           attemptId: 'session:0',
@@ -40,12 +40,11 @@ void main() {
         ),
         isTrue,
       );
-      expect(await store.practiceHistory(), {
-        'sample-1': const PracticeHistory(
-          completedAttempts: 1,
-          incorrectAttempts: 0,
-        ),
-      });
+      var history = (await store.vocabularySelectionHistory())['sample-1']!;
+      expect(history.attemptCount, 1);
+      expect(history.correctAttemptCount, 1);
+      expect(history.mostRecentResults, [true]);
+      expect(history.lastAttemptAt, isNotNull);
       expect(
         await store.recordAttempt(
           attemptId: 'session:0',
@@ -68,12 +67,10 @@ void main() {
       expect(progress.incorrectAnswers, 1);
       expect(progress.uniqueEntriesCorrect, 1);
       expect(progress.uniqueEntriesIncorrect, 1);
-      expect(await store.practiceHistory(), {
-        'sample-1': const PracticeHistory(
-          completedAttempts: 2,
-          incorrectAttempts: 1,
-        ),
-      });
+      history = (await store.vocabularySelectionHistory())['sample-1']!;
+      expect(history.attemptCount, 2);
+      expect(history.correctAttemptCount, 1);
+      expect(history.mostRecentResults, [false, true]);
       await store.close();
     },
   );
@@ -109,6 +106,15 @@ void main() {
       ),
       isFalse,
     );
+    final conjugationHistory =
+        (await store.conjugationSelectionHistory())[const ConjugationPromptKey(
+          'de-beginner-sein',
+          'ich',
+        )]!;
+    expect(conjugationHistory.attemptCount, 1);
+    expect(conjugationHistory.correctAttemptCount, 1);
+    expect(conjugationHistory.mostRecentResults, [true]);
+    expect(await store.vocabularySelectionHistory(), isEmpty);
     expect((await store.progress()).itemsPracticed, 0);
     final group =
         (await store.conjugationProgress())[const ConjugationProgressKey(
@@ -390,12 +396,11 @@ void main() {
       final progress = await store.progress();
       expect(progress.itemsPracticed, 1);
       expect(progress.correctAnswers, 1);
-      expect(await store.practiceHistory(), {
-        'sample-1': const PracticeHistory(
-          completedAttempts: 1,
-          incorrectAttempts: 0,
-        ),
-      });
+      final history = (await store.vocabularySelectionHistory())['sample-1']!;
+      expect(history.attemptCount, 1);
+      expect(history.correctAttemptCount, 1);
+      expect(history.mostRecentResults, [true]);
+      expect(history.lastAttemptAt, isNotNull);
       await store.close();
     } finally {
       await directory.delete(recursive: true);

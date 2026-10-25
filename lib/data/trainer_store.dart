@@ -3,7 +3,8 @@ import 'dart:convert';
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
-import '../domain/practice_session.dart';
+import '../domain/adaptive_selection.dart';
+import '../domain/conjugation_session.dart';
 import '../models/conjugation.dart';
 import '../models/vocabulary.dart';
 
@@ -64,7 +65,9 @@ abstract interface class TrainerStore {
   Future<void> reconcile(VocabularyDataset dataset);
   Future<int> activeVocabularyVersion();
   Future<List<VocabularyEntry>> activeEntries();
-  Future<Map<String, PracticeHistory>> practiceHistory();
+  Future<Map<String, SelectionHistory>> vocabularySelectionHistory();
+  Future<Map<ConjugationPromptKey, SelectionHistory>>
+  conjugationSelectionHistory();
   Future<ProgressSnapshot> progress();
   Future<List<ConjugationEntry>> activeConjugations();
   Future<Map<ConjugationProgressKey, ConjugationProgress>>
@@ -262,21 +265,64 @@ class SqliteTrainerStore implements TrainerStore {
   }
 
   @override
-  Future<Map<String, PracticeHistory>> practiceHistory() async {
-    final rows = await _database.rawQuery('''
-      SELECT
-        entry_id,
-        COUNT(*) AS attempts,
-        SUM(1 - correct) AS incorrect
-      FROM practice_attempts
-      GROUP BY entry_id
-    ''');
+  Future<Map<String, SelectionHistory>> vocabularySelectionHistory() async {
+    final rows = await _database.query(
+      'practice_attempts',
+      columns: const ['entry_id', 'correct', 'completed_at'],
+      orderBy: 'completed_at DESC, rowid DESC',
+    );
+    final attemptsByEntry = <String, List<SelectionAttempt>>{};
+    for (final row in rows) {
+      attemptsByEntry
+          .putIfAbsent(row['entry_id']! as String, () => [])
+          .add(
+            SelectionAttempt(
+              correct: row['correct']! as int == 1,
+              completedAt: DateTime.fromMillisecondsSinceEpoch(
+                row['completed_at']! as int,
+              ),
+            ),
+          );
+    }
     return Map.unmodifiable({
-      for (final row in rows)
-        row['entry_id']! as String: PracticeHistory(
-          completedAttempts: row['attempts']! as int,
-          incorrectAttempts: row['incorrect']! as int,
-        ),
+      for (final entry in attemptsByEntry.entries)
+        entry.key: SelectionHistory.fromAttempts(entry.value),
+    });
+  }
+
+  @override
+  Future<Map<ConjugationPromptKey, SelectionHistory>>
+  conjugationSelectionHistory() async {
+    final rows = await _database.query(
+      'conjugation_attempts',
+      columns: const [
+        'conjugation_id',
+        'subject_id',
+        'correct',
+        'completed_at',
+      ],
+      orderBy: 'completed_at DESC, rowid DESC',
+    );
+    final attemptsByPrompt = <ConjugationPromptKey, List<SelectionAttempt>>{};
+    for (final row in rows) {
+      final key = ConjugationPromptKey(
+        row['conjugation_id']! as String,
+        row['subject_id']! as String,
+      );
+      attemptsByPrompt
+          .putIfAbsent(key, () => [])
+          .add(
+            SelectionAttempt(
+              correct: row['correct']! as int == 1,
+              completedAt: DateTime.fromMillisecondsSinceEpoch(
+                row['completed_at']! as int,
+              ),
+            ),
+          );
+    }
+    return Map.unmodifiable({
+      for (final entry in attemptsByPrompt.entries)
+        entry.key: SelectionHistory.fromAttempts(entry.value),
     });
   }
 
