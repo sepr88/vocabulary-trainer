@@ -140,6 +140,49 @@ void main() {
   });
 
   test(
+    'new vocabulary version refreshes accented examples and keeps history',
+    () async {
+      final opened = await openMemoryStore();
+      final store = opened.store;
+      await store.reconcile(
+        sampleDataset(
+          version: 3,
+          entries: [
+            sampleEntry(
+              germanExample: 'Die T\uFFFD ist offen.',
+              portugueseExample: 'A porta est\uFFFD aberta.',
+            ),
+          ],
+        ),
+      );
+      await store.recordAttempt(
+        attemptId: 'accent-session:0',
+        entryId: 'sample-1',
+        correct: true,
+      );
+
+      await store.reconcile(
+        sampleDataset(
+          version: 4,
+          entries: [
+            sampleEntry(
+              germanExample: 'Die T\u00FCr ist offen.',
+              portugueseExample: 'A porta est\u00E1 aberta.',
+            ),
+          ],
+        ),
+      );
+
+      final entry = (await store.activeEntries()).single;
+      expect(entry.germanExample, 'Die T\u00FCr ist offen.');
+      expect(entry.portugueseExample, 'A porta est\u00E1 aberta.');
+      expect((await store.progress()).correctAnswers, 1);
+      expect(await store.activeVocabularyVersion(), 4);
+      await store.close();
+    },
+  );
+
+  test(
     'migrates prior vocabulary rows and fills their examples on reconcile',
     () async {
       final database = await databaseFactoryFfi.openDatabase(
@@ -184,18 +227,18 @@ void main() {
       });
       await database.insert('metadata', {
         'key': 'vocabulary_version',
-        'value': '2',
+        'value': '3',
       });
 
       await SqliteTrainerStore.upgradeTables(database, 1, 2);
       final store = SqliteTrainerStore(database);
-      await store.reconcile(sampleDataset(version: 3));
+      await store.reconcile(sampleDataset(version: 4));
 
       final entry = (await store.activeEntries()).single;
       expect(entry.germanExample, 'Das Haus ist wichtig.');
       expect(entry.portugueseExample, 'A casa é importante.');
       expect((await store.progress()).itemsPracticed, 1);
-      expect(await store.activeVocabularyVersion(), 3);
+      expect(await store.activeVocabularyVersion(), 4);
       await store.close();
     },
   );

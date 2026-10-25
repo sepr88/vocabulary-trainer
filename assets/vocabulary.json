@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "entries": [
     {"id":"de-001","level":"beginner","de":{"primary":"das Haus","accepted":["das Haus","Haus"]},"pt-PT":{"primary":"a casa","accepted":["a casa","casa"]},"examples":{"de":"Das Haus ist sehr groß.","pt-PT":"A casa é muito grande."}},
     {"id":"de-002","level":"beginner","de":{"primary":"die Wohnung","accepted":["die Wohnung","Wohnung"]},"pt-PT":{"primary":"o apartamento","accepted":["o apartamento","apartamento"]},"examples":{"de":"Die Wohnung hat zwei Zimmer.","pt-PT":"O apartamento tem dois quartos."}},

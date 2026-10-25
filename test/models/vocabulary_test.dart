@@ -11,9 +11,14 @@ void main() {
       final source = await rootBundle.loadString('assets/vocabulary.json');
       final dataset = VocabularyDataset.fromJsonString(source);
 
-      expect(dataset.version, 3);
+      expect(dataset.version, 4);
       expect(dataset.entries, hasLength(100));
       expect(dataset.entries.map((entry) => entry.id).toSet(), hasLength(100));
+      final door = dataset.entries.singleWhere((entry) => entry.id == 'de-004');
+      expect(door.germanExample, 'Die Tür ist offen.');
+      expect(door.portugueseExample, 'A porta está aberta.');
+      expect(door.germanExample.codeUnits, contains(0x00fc));
+      expect(door.portugueseExample.codeUnits, contains(0x00e1));
       expect(
         dataset.entries.map((entry) => entry.level).toSet(),
         containsAll(ProficiencyLevel.values),
