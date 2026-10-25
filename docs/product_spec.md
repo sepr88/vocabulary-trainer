@@ -83,4 +83,3 @@ Keep the experience simple, intuitive, fast to start, focused, consistent, acces
 - **OPD-009:** Should users be able to record their pronunciation and compare it with a prerecorded reference?
 - **OPD-010:** Should the app identify potential false friends—words that look or sound similar but differ in meaning—and when should it show that information?
 - **OPD-011:** Should the app include fill-in-the-blank practice?
-- **OPD-012:** Should the app include an adaptive vocabulary coach that tracks recall accuracy and repeated mistakes, adjusts review intervals for each word, and prioritizes words predicted to be nearly forgotten? If so, which exercises should it schedule, and when?

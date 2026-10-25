@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:vocabulary_trainer/data/trainer_store.dart';
-import 'package:vocabulary_trainer/domain/practice_session.dart';
+import 'package:vocabulary_trainer/domain/adaptive_selection.dart';
+import 'package:vocabulary_trainer/domain/conjugation_session.dart';
 import 'package:vocabulary_trainer/main.dart';
 import 'package:vocabulary_trainer/models/conjugation.dart';
 import 'package:vocabulary_trainer/models/vocabulary.dart';
@@ -245,8 +246,17 @@ class _MemoryStore implements TrainerStore {
   final List<VocabularyEntry> entries;
   final int vocabularyVersion;
   final List<ConjugationEntry> conjugations;
-  final Map<String, ({String entryId, bool correct})> _recorded = {};
-  final Map<String, ({String conjugationId, String subjectId, bool correct})>
+  final Map<String, ({String entryId, bool correct, DateTime completedAt})>
+  _recorded = {};
+  final Map<
+    String,
+    ({
+      String conjugationId,
+      String subjectId,
+      bool correct,
+      DateTime completedAt,
+    })
+  >
   _conjugationRecorded = {};
 
   List<bool> get attempts =>
@@ -261,19 +271,47 @@ class _MemoryStore implements TrainerStore {
   Future<int> activeVocabularyVersion() async => vocabularyVersion;
 
   @override
-  Future<Map<String, PracticeHistory>> practiceHistory() async => {
-    for (final entry in _recorded.values)
-      entry.entryId: PracticeHistory(
-        completedAttempts: _recorded.values
-            .where((attempt) => attempt.entryId == entry.entryId)
-            .length,
-        incorrectAttempts: _recorded.values
-            .where(
-              (attempt) => attempt.entryId == entry.entryId && !attempt.correct,
-            )
-            .length,
-      ),
-  };
+  Future<Map<String, SelectionHistory>> vocabularySelectionHistory() async {
+    final grouped = <String, List<SelectionAttempt>>{};
+    for (final attempt in _recorded.values) {
+      grouped
+          .putIfAbsent(attempt.entryId, () => [])
+          .add(
+            SelectionAttempt(
+              correct: attempt.correct,
+              completedAt: attempt.completedAt,
+            ),
+          );
+    }
+    return {
+      for (final entry in grouped.entries)
+        entry.key: SelectionHistory.fromAttempts(entry.value),
+    };
+  }
+
+  @override
+  Future<Map<ConjugationPromptKey, SelectionHistory>>
+  conjugationSelectionHistory() async {
+    final grouped = <ConjugationPromptKey, List<SelectionAttempt>>{};
+    for (final attempt in _conjugationRecorded.values) {
+      final key = ConjugationPromptKey(
+        attempt.conjugationId,
+        attempt.subjectId,
+      );
+      grouped
+          .putIfAbsent(key, () => [])
+          .add(
+            SelectionAttempt(
+              correct: attempt.correct,
+              completedAt: attempt.completedAt,
+            ),
+          );
+    }
+    return {
+      for (final entry in grouped.entries)
+        entry.key: SelectionHistory.fromAttempts(entry.value),
+    };
+  }
 
   @override
   Future<void> close() async {}
@@ -354,7 +392,11 @@ class _MemoryStore implements TrainerStore {
     required bool correct,
   }) async {
     if (_recorded.containsKey(attemptId)) return false;
-    _recorded[attemptId] = (entryId: entryId, correct: correct);
+    _recorded[attemptId] = (
+      entryId: entryId,
+      correct: correct,
+      completedAt: DateTime.now(),
+    );
     return true;
   }
 
@@ -370,6 +412,7 @@ class _MemoryStore implements TrainerStore {
       conjugationId: conjugationId,
       subjectId: subjectId,
       correct: correct,
+      completedAt: DateTime.now(),
     );
     return true;
   }

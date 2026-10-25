@@ -1,8 +1,25 @@
 import 'dart:math';
 
+import 'adaptive_selection.dart';
 import '../models/conjugation.dart';
 import '../models/vocabulary.dart';
 import 'practice_session.dart';
+
+class ConjugationPromptKey {
+  const ConjugationPromptKey(this.conjugationId, this.subjectId);
+
+  final String conjugationId;
+  final String subjectId;
+
+  @override
+  bool operator ==(Object other) =>
+      other is ConjugationPromptKey &&
+      other.conjugationId == conjugationId &&
+      other.subjectId == subjectId;
+
+  @override
+  int get hashCode => Object.hash(conjugationId, subjectId);
+}
 
 class ConjugationPrompt {
   const ConjugationPrompt({
@@ -35,7 +52,9 @@ class ConjugationSession {
     List<ConjugationEntry> entries, {
     required ConjugationLanguage language,
     required ProficiencyLevel level,
+    Map<ConjugationPromptKey, SelectionHistory> practiceHistory = const {},
     Random? random,
+    DateTime? now,
   }) {
     final randomizer = random ?? Random.secure();
     final selected = entries
@@ -46,10 +65,21 @@ class ConjugationSession {
         'No ${language.displayName} ${level.name} conjugations are available.',
       );
     }
-    final prompts = [
+    final candidates = [
       for (final entry in selected)
         for (final subject in entry.subjects) (entry: entry, subject: subject),
-    ]..shuffle(randomizer);
+    ];
+    final prompts = weightedSelection(
+      candidates: candidates,
+      historyFor: (candidate) =>
+          practiceHistory[ConjugationPromptKey(
+            candidate.entry.id,
+            candidate.subject.id,
+          )] ??
+          SelectionHistory.empty,
+      random: randomizer,
+      now: now ?? DateTime.now(),
+    );
     final sessionId = List<int>.generate(
       16,
       (_) => randomizer.nextInt(256),
