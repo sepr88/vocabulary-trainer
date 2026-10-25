@@ -163,6 +163,30 @@ void main() {
     expect(find.text('1'), findsOneWidget);
   });
 
+  testWidgets('conjugation setup shows the capped session prompt count', (
+    tester,
+  ) async {
+    final conjugations = [
+      for (var index = 0; index < 8; index++)
+        sampleConjugation(id: 'de-beginner-$index'),
+    ];
+    final store = _MemoryStore([sampleEntry()], conjugations: conjugations);
+    await tester.pumpWidget(MyApp(storeLoader: () async => store));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Practice conjugation'));
+    await tester.pumpAndSettle();
+    expect(find.text('Start session (15 prompts)'), findsOneWidget);
+    expect(
+      find.text('Each session includes up to 15 verb and subject prompts.'),
+      findsOneWidget,
+    );
+
+    await tester.tap(find.text('Start session (15 prompts)'));
+    await tester.pumpAndSettle();
+    expect(find.text('Prompt 1 of 15'), findsOneWidget);
+  });
+
   testWidgets(
     'opens only the selected language reference and returns to the active prompt',
     (tester) async {

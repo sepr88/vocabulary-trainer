@@ -1108,9 +1108,12 @@ class _ConjugationSetupScreenState extends State<ConjugationSetupScreen> {
         ),
       );
     }
-    final selectedCount = _entries
+    final availablePromptCount = _entries
         .where((entry) => entry.language == _language && entry.level == _level)
         .fold<int>(0, (count, entry) => count + entry.subjects.length);
+    final sessionPromptCount = availablePromptCount > 15
+        ? 15
+        : availablePromptCount;
     return Scaffold(
       appBar: AppBar(title: const Text('Conjugation practice')),
       body: ListView(
@@ -1157,17 +1160,17 @@ class _ConjugationSetupScreenState extends State<ConjugationSetupScreen> {
           ),
           const SizedBox(height: 24),
           Text(
-            'Each session practices every verb and subject form once.',
+            'Each session includes up to 15 verb and subject prompts.',
             style: Theme.of(context).textTheme.bodyLarge,
           ),
           const SizedBox(height: 20),
           FilledButton.icon(
-            onPressed: selectedCount == 0 ? null : _start,
+            onPressed: availablePromptCount == 0 ? null : _start,
             icon: const Icon(Icons.play_arrow_rounded),
             label: Text(
-              selectedCount == 0
+              availablePromptCount == 0
                   ? 'No conjugations available'
-                  : 'Start session ($selectedCount prompts)',
+                  : 'Start session ($sessionPromptCount prompts)',
             ),
           ),
         ],
