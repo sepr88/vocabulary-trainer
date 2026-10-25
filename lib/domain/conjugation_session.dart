@@ -52,13 +52,19 @@ class ConjugationSession {
     List<ConjugationEntry> entries, {
     required ConjugationLanguage language,
     required ProficiencyLevel level,
+    String? topicId,
     Map<ConjugationPromptKey, SelectionHistory> practiceHistory = const {},
     Random? random,
     DateTime? now,
   }) {
     final randomizer = random ?? Random.secure();
     final selected = entries
-        .where((entry) => entry.language == language && entry.level == level)
+        .where(
+          (entry) =>
+              entry.language == language &&
+              entry.level == level &&
+              (topicId == null || entry.topic == topicId),
+        )
         .toList();
     if (selected.isEmpty) {
       throw StateError(

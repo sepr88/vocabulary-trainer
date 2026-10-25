@@ -267,15 +267,19 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _startPractice() async {
-    await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (context) => PracticeScreen(
-          store: widget.store,
-          entries: _entries,
-          practiceHistory: _practiceHistory,
-        ),
-      ),
-    );
+    final setup = _entries.every((entry) => entry.topic.isNotEmpty)
+        ? VocabularySetupScreen(
+            store: widget.store,
+            entries: _entries,
+            practiceHistory: _practiceHistory,
+          )
+        : PracticeScreen(
+            store: widget.store,
+            entries: _entries,
+            practiceHistory: _practiceHistory,
+          );
+    await Navigator.of(context)
+        .push<void>(MaterialPageRoute<void>(builder: (context) => setup));
     if (mounted) await _load();
   }
 
@@ -350,6 +354,107 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ],
             ),
+    );
+  }
+}
+
+class VocabularySetupScreen extends StatefulWidget {
+  const VocabularySetupScreen({
+    super.key,
+    required this.store,
+    required this.entries,
+    required this.practiceHistory,
+  });
+
+  final TrainerStore store;
+  final List<VocabularyEntry> entries;
+  final Map<String, SelectionHistory> practiceHistory;
+
+  @override
+  State<VocabularySetupScreen> createState() => _VocabularySetupScreenState();
+}
+
+class _VocabularySetupScreenState extends State<VocabularySetupScreen> {
+  String? _topicId;
+
+  List<VocabularyEntry> get _candidates => widget.entries
+      .where((entry) => _topicId == null || entry.topic == _topicId)
+      .toList(growable: false);
+
+  @override
+  Widget build(BuildContext context) {
+    final candidates = _candidates;
+    final count = min(candidates.length, 15);
+    return Scaffold(
+      appBar: AppBar(title: const Text('Vocabulary practice')),
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 32),
+        children: [
+          Text(
+            'Choose your topic',
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
+          const SizedBox(height: 18),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ChoiceChip(
+              label: const Text('All topics'),
+              selected: _topicId == null,
+              onSelected: (_) => setState(() => _topicId = null),
+            ),
+          ),
+          for (final level in ProficiencyLevel.values) ...[
+            const SizedBox(height: 18),
+            Text(
+              level == ProficiencyLevel.beginner ? 'Beginner' : 'Advanced',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 4,
+              children: [
+                for (final topic in TrainingTopics.vocabulary.where(
+                  (topic) => topic.level == level,
+                ))
+                  ChoiceChip(
+                    key: ValueKey('vocabulary-topic-${topic.id}'),
+                    label: Text(topic.label),
+                    selected: _topicId == topic.id,
+                    onSelected: (_) => setState(() => _topicId = topic.id),
+                  ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 20),
+          Text(
+            'A session includes up to 15 vocabulary entries.',
+            style: Theme.of(context).textTheme.bodyLarge,
+          ),
+          const SizedBox(height: 20),
+          FilledButton.icon(
+            key: const ValueKey('start-vocabulary-session'),
+            onPressed: count == 0
+                ? null
+                : () => Navigator.of(context).pushReplacement<void, void>(
+                    MaterialPageRoute<void>(
+                      builder: (context) => PracticeScreen(
+                        store: widget.store,
+                        entries: candidates,
+                        practiceHistory: widget.practiceHistory,
+                        topicId: _topicId,
+                      ),
+                    ),
+                  ),
+            icon: const Icon(Icons.play_arrow_rounded),
+            label: Text(
+              count == 0
+                  ? 'No vocabulary available'
+                  : 'Start session ($count entries)',
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -688,9 +793,11 @@ class PracticeScreen extends StatefulWidget {
     required this.store,
     required List<VocabularyEntry> entries,
     Map<String, SelectionHistory> practiceHistory = const {},
+    String? topicId,
     Random? random,
   }) : session = PracticeSession.create(
          entries,
+         topicId: topicId,
          practiceHistory: practiceHistory,
          random: random,
        );
@@ -1038,6 +1145,7 @@ class ConjugationSetupScreen extends StatefulWidget {
 class _ConjugationSetupScreenState extends State<ConjugationSetupScreen> {
   ConjugationLanguage _language = ConjugationLanguage.german;
   ProficiencyLevel _level = ProficiencyLevel.beginner;
+  String? _topicId;
   List<ConjugationEntry> _entries = const [];
   Map<ConjugationPromptKey, SelectionHistory> _practiceHistory = const {};
   Object? _loadError;
@@ -1077,6 +1185,7 @@ class _ConjugationSetupScreenState extends State<ConjugationSetupScreen> {
       _entries,
       language: _language,
       level: _level,
+      topicId: _topicId,
       practiceHistory: _practiceHistory,
     );
     Navigator.of(context).pushReplacement<void, void>(
@@ -1109,7 +1218,12 @@ class _ConjugationSetupScreenState extends State<ConjugationSetupScreen> {
       );
     }
     final availablePromptCount = _entries
-        .where((entry) => entry.language == _language && entry.level == _level)
+        .where(
+          (entry) =>
+              entry.language == _language &&
+              entry.level == _level &&
+              (_topicId == null || entry.topic == _topicId),
+        )
         .fold<int>(0, (count, entry) => count + entry.subjects.length);
     final sessionPromptCount = availablePromptCount > 15
         ? 15
@@ -1136,7 +1250,10 @@ class _ConjugationSetupScreenState extends State<ConjugationSetupScreen> {
             ],
             selected: {_language},
             onSelectionChanged: (selection) {
-              setState(() => _language = selection.single);
+              setState(() {
+                _language = selection.single;
+                _topicId = null;
+              });
             },
           ),
           const SizedBox(height: 24),
@@ -1155,8 +1272,34 @@ class _ConjugationSetupScreenState extends State<ConjugationSetupScreen> {
             ],
             selected: {_level},
             onSelectionChanged: (selection) {
-              setState(() => _level = selection.single);
+              setState(() {
+                _level = selection.single;
+                _topicId = null;
+              });
             },
+          ),
+          const SizedBox(height: 24),
+          Text('Topic', style: Theme.of(context).textTheme.titleMedium),
+          const SizedBox(height: 10),
+          Wrap(
+            spacing: 8,
+            runSpacing: 4,
+            children: [
+              ChoiceChip(
+                label: const Text('All topics'),
+                selected: _topicId == null,
+                onSelected: (_) => setState(() => _topicId = null),
+              ),
+              for (final topic in TrainingTopics.conjugation.where(
+                (topic) => topic.level == _level,
+              ))
+                ChoiceChip(
+                  key: ValueKey('conjugation-topic-${topic.id}'),
+                  label: Text(topic.label),
+                  selected: _topicId == topic.id,
+                  onSelected: (_) => setState(() => _topicId = topic.id),
+                ),
+            ],
           ),
           const SizedBox(height: 24),
           Text(
