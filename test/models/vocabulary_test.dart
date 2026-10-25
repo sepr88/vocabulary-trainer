@@ -11,11 +11,27 @@ void main() {
       final source = await rootBundle.loadString('assets/vocabulary.json');
       final dataset = VocabularyDataset.fromJsonString(source);
 
+      expect(dataset.version, 4);
       expect(dataset.entries, hasLength(100));
       expect(dataset.entries.map((entry) => entry.id).toSet(), hasLength(100));
+      final door = dataset.entries.singleWhere((entry) => entry.id == 'de-004');
+      expect(door.germanExample, 'Die Tür ist offen.');
+      expect(door.portugueseExample, 'A porta está aberta.');
+      expect(door.germanExample.codeUnits, contains(0x00fc));
+      expect(door.portugueseExample.codeUnits, contains(0x00e1));
       expect(
         dataset.entries.map((entry) => entry.level).toSet(),
         containsAll(ProficiencyLevel.values),
+      );
+      expect(
+        dataset.entries.every(
+          (entry) =>
+              entry.germanExample.isNotEmpty &&
+              entry.portugueseExample.isNotEmpty &&
+              entry.germanExample.trim().split(RegExp(r'\s+')).length <= 12 &&
+              entry.portugueseExample.trim().split(RegExp(r'\s+')).length <= 12,
+        ),
+        isTrue,
       );
     },
   );
@@ -50,7 +66,8 @@ void main() {
         "id":"same",
         "level":"beginner",
         "de":{"primary":"Haus","accepted":["Haus","Haus"]},
-        "pt-PT":{"primary":"casa","accepted":["casa"]}
+        "pt-PT":{"primary":"casa","accepted":["casa"]},
+        "examples":{"de":"Das Haus ist wichtig.","pt-PT":"A casa é importante."}
       }
     ''';
     expect(
@@ -64,12 +81,44 @@ void main() {
         "id":"same",
         "level":"beginner",
         "de":{"primary":"Haus","accepted":["Haus"]},
-        "pt-PT":{"primary":"casa","accepted":["casa"]}
+        "pt-PT":{"primary":"casa","accepted":["casa"]},
+        "examples":{"de":"Das Haus ist wichtig.","pt-PT":"A casa é importante."}
       }
     ''';
     expect(
       () => VocabularyDataset.fromJsonString(
         '{"version":1,"entries":[$validEntry,$validEntry]}',
+      ),
+      throwsFormatException,
+    );
+  });
+
+  test('requires valid short examples in both languages', () {
+    const missingExample =
+        '{"id":"one","level":"beginner","de":{"primary":"Haus","accepted":["Haus"]},'
+        '"pt-PT":{"primary":"casa","accepted":["casa"]}}';
+    expect(
+      () => VocabularyDataset.fromJsonString(
+        '{"version":1,"entries":[$missingExample]}',
+      ),
+      throwsFormatException,
+    );
+
+    const longExample = '''
+      {
+        "id":"one",
+        "level":"beginner",
+        "de":{"primary":"Haus","accepted":["Haus"]},
+        "pt-PT":{"primary":"casa","accepted":["casa"]},
+        "examples":{
+          "de":"Das Haus ist sehr wichtig für alle Menschen in der ganzen Stadt jeden Tag.",
+          "pt-PT":"A casa é muito importante."
+        }
+      }
+    ''';
+    expect(
+      () => VocabularyDataset.fromJsonString(
+        '{"version":1,"entries":[$longExample]}',
       ),
       throwsFormatException,
     );

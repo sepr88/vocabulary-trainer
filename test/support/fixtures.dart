@@ -4,10 +4,14 @@ VocabularyEntry sampleEntry({
   String id = 'sample-1',
   String german = 'das Haus',
   String portuguese = 'a casa',
+  String germanExample = 'Das Haus ist wichtig.',
+  String portugueseExample = 'A casa é importante.',
 }) {
   return VocabularyEntry(
     id: id,
     level: ProficiencyLevel.beginner,
+    germanExample: germanExample,
+    portugueseExample: portugueseExample,
     german: LanguageForm(
       primary: german,
       accepted: [german, german.replaceAll(RegExp(r'^(der|die|das) '), '')],

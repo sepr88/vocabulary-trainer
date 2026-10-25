@@ -139,6 +139,110 @@ void main() {
     await store.close();
   });
 
+  test(
+    'new vocabulary version refreshes accented examples and keeps history',
+    () async {
+      final opened = await openMemoryStore();
+      final store = opened.store;
+      await store.reconcile(
+        sampleDataset(
+          version: 3,
+          entries: [
+            sampleEntry(
+              germanExample: 'Die T\uFFFD ist offen.',
+              portugueseExample: 'A porta est\uFFFD aberta.',
+            ),
+          ],
+        ),
+      );
+      await store.recordAttempt(
+        attemptId: 'accent-session:0',
+        entryId: 'sample-1',
+        correct: true,
+      );
+
+      await store.reconcile(
+        sampleDataset(
+          version: 4,
+          entries: [
+            sampleEntry(
+              germanExample: 'Die T\u00FCr ist offen.',
+              portugueseExample: 'A porta est\u00E1 aberta.',
+            ),
+          ],
+        ),
+      );
+
+      final entry = (await store.activeEntries()).single;
+      expect(entry.germanExample, 'Die T\u00FCr ist offen.');
+      expect(entry.portugueseExample, 'A porta est\u00E1 aberta.');
+      expect((await store.progress()).correctAnswers, 1);
+      expect(await store.activeVocabularyVersion(), 4);
+      await store.close();
+    },
+  );
+
+  test(
+    'migrates prior vocabulary rows and fills their examples on reconcile',
+    () async {
+      final database = await databaseFactoryFfi.openDatabase(
+        inMemoryDatabasePath,
+      );
+      await database.execute('''
+      CREATE TABLE vocabulary_entries (
+        id TEXT PRIMARY KEY,
+        level TEXT NOT NULL,
+        de_primary TEXT NOT NULL,
+        de_accepted TEXT NOT NULL,
+        pt_primary TEXT NOT NULL,
+        pt_accepted TEXT NOT NULL,
+        active INTEGER NOT NULL
+      )
+    ''');
+      await database.execute('''
+      CREATE TABLE practice_attempts (
+        attempt_id TEXT PRIMARY KEY,
+        entry_id TEXT NOT NULL,
+        correct INTEGER NOT NULL,
+        completed_at INTEGER NOT NULL
+      )
+    ''');
+      await database.execute('''
+      CREATE TABLE metadata (key TEXT PRIMARY KEY, value TEXT NOT NULL)
+    ''');
+      await database.insert('vocabulary_entries', {
+        'id': 'sample-1',
+        'level': 'beginner',
+        'de_primary': 'das Haus',
+        'de_accepted': '["das Haus","Haus"]',
+        'pt_primary': 'a casa',
+        'pt_accepted': '["a casa","casa"]',
+        'active': 1,
+      });
+      await database.insert('practice_attempts', {
+        'attempt_id': 'legacy-session:0',
+        'entry_id': 'sample-1',
+        'correct': 1,
+        'completed_at': 1,
+      });
+      await database.insert('metadata', {
+        'key': 'vocabulary_version',
+        'value': '3',
+      });
+
+      await SqliteTrainerStore.upgradeTables(database, 1, 2);
+      final store = SqliteTrainerStore(database);
+      await store.reconcile(sampleDataset(version: 4));
+
+      final entry = (await store.activeEntries()).single;
+      expect(entry.germanExample, 'Das Haus ist wichtig.');
+      expect(entry.portugueseExample, 'A casa é importante.');
+      expect((await store.progress()).itemsPracticed, 1);
+      expect(await store.activeVocabularyVersion(), 4);
+      await store.close();
+    },
+  );
+
   test('failed transaction leaves the existing active store intact', () async {
     final opened = await openMemoryStore();
     final store = opened.store;

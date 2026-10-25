@@ -47,8 +47,10 @@ class SqliteTrainerStore implements TrainerStore {
     final directory = await getDatabasesPath();
     final database = await openDatabase(
       p.join(directory, 'vocabulary_trainer.db'),
-      version: 1,
+      version: 2,
       onCreate: (db, version) => createTables(db),
+      onUpgrade: (db, oldVersion, newVersion) =>
+          upgradeTables(db, oldVersion, newVersion),
     );
     return SqliteTrainerStore(database);
   }
@@ -62,6 +64,8 @@ class SqliteTrainerStore implements TrainerStore {
         de_accepted TEXT NOT NULL,
         pt_primary TEXT NOT NULL,
         pt_accepted TEXT NOT NULL,
+        de_example TEXT NOT NULL,
+        pt_example TEXT NOT NULL,
         active INTEGER NOT NULL
       )
     ''');
@@ -79,6 +83,21 @@ class SqliteTrainerStore implements TrainerStore {
         value TEXT NOT NULL
       )
     ''');
+  }
+
+  static Future<void> upgradeTables(
+    DatabaseExecutor database,
+    int oldVersion,
+    int newVersion,
+  ) async {
+    if (oldVersion < 2 && newVersion >= 2) {
+      await database.execute(
+        "ALTER TABLE vocabulary_entries ADD COLUMN de_example TEXT NOT NULL DEFAULT ''",
+      );
+      await database.execute(
+        "ALTER TABLE vocabulary_entries ADD COLUMN pt_example TEXT NOT NULL DEFAULT ''",
+      );
+    }
   }
 
   @override
@@ -251,6 +270,8 @@ class SqliteTrainerStore implements TrainerStore {
     'de_accepted': jsonEncode(entry.german.accepted),
     'pt_primary': entry.portuguese.primary,
     'pt_accepted': jsonEncode(entry.portuguese.accepted),
+    'de_example': entry.germanExample,
+    'pt_example': entry.portugueseExample,
     'active': 1,
   };
 
@@ -272,6 +293,8 @@ class SqliteTrainerStore implements TrainerStore {
               .cast<String>(),
         ),
       ),
+      germanExample: row['de_example']! as String,
+      portugueseExample: row['pt_example']! as String,
     );
   }
 }
