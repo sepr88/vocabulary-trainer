@@ -7,6 +7,7 @@ import 'data/bootstrap.dart';
 import 'data/trainer_store.dart';
 import 'domain/adaptive_selection.dart';
 import 'domain/conjugation_session.dart';
+import 'domain/learning_progress.dart';
 import 'domain/practice_session.dart';
 import 'models/conjugation.dart';
 import 'models/grammar_reference.dart';
@@ -223,7 +224,9 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> {
   List<VocabularyEntry> _entries = const [];
+  List<ConjugationEntry> _conjugations = const [];
   Map<String, SelectionHistory> _practiceHistory = const {};
+  Map<ConjugationPromptKey, SelectionHistory> _conjugationHistory = const {};
   ProgressSnapshot? _progress;
   Map<ConjugationProgressKey, ConjugationProgress> _conjugationProgress =
       const {};
@@ -244,14 +247,19 @@ class _HomeScreenState extends State<HomeScreen> {
     });
     try {
       final entries = await widget.store.activeEntries();
+      final conjugations = await widget.store.activeConjugations();
       final practiceHistory = await widget.store.vocabularySelectionHistory();
+      final conjugationHistory = await widget.store
+          .conjugationSelectionHistory();
       final progress = await widget.store.progress();
       final conjugationProgress = await widget.store.conjugationProgress();
       final vocabularyVersion = await widget.store.activeVocabularyVersion();
       if (!mounted) return;
       setState(() {
         _entries = entries;
+        _conjugations = conjugations;
         _practiceHistory = practiceHistory;
+        _conjugationHistory = conjugationHistory;
         _progress = progress;
         _conjugationProgress = conjugationProgress;
         _vocabularyVersion = vocabularyVersion;
@@ -338,6 +346,10 @@ class _HomeScreenState extends State<HomeScreen> {
                         const SizedBox(height: 14),
                         _ProgressOverview(
                           progress: _progress!,
+                          entries: _entries,
+                          practiceHistory: _practiceHistory,
+                          conjugations: _conjugations,
+                          conjugationHistory: _conjugationHistory,
                           conjugationProgress: _conjugationProgress,
                         ),
                       ],
@@ -436,7 +448,7 @@ class _VocabularySetupScreenState extends State<VocabularySetupScreen> {
             key: const ValueKey('start-vocabulary-session'),
             onPressed: count == 0
                 ? null
-                : () => Navigator.of(context).pushReplacement<void, void>(
+                : () => Navigator.of(context).push<void>(
                     MaterialPageRoute<void>(
                       builder: (context) => PracticeScreen(
                         store: widget.store,
@@ -603,10 +615,18 @@ class _EmptyVocabularyCard extends StatelessWidget {
 class _ProgressOverview extends StatelessWidget {
   const _ProgressOverview({
     required this.progress,
+    required this.entries,
+    required this.practiceHistory,
+    required this.conjugations,
+    required this.conjugationHistory,
     required this.conjugationProgress,
   });
 
   final ProgressSnapshot progress;
+  final List<VocabularyEntry> entries;
+  final Map<String, SelectionHistory> practiceHistory;
+  final List<ConjugationEntry> conjugations;
+  final Map<ConjugationPromptKey, SelectionHistory> conjugationHistory;
   final Map<ConjugationProgressKey, ConjugationProgress> conjugationProgress;
 
   @override
@@ -627,6 +647,10 @@ class _ProgressOverview extends StatelessWidget {
         Icons.history_rounded,
       ),
     ];
+    final vocabularyGroups = LearningProgress.vocabulary(
+      entries: entries,
+      history: practiceHistory,
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -656,6 +680,31 @@ class _ProgressOverview extends StatelessWidget {
         ),
         const SizedBox(height: 28),
         Text(
+          'Vocabulary progress',
+          style: Theme.of(context).textTheme.titleLarge,
+        ),
+        const SizedBox(height: 12),
+        for (final level in ProficiencyLevel.values) ...[
+          Padding(
+            padding: const EdgeInsets.only(top: 8, bottom: 8),
+            child: Text(
+              level.name == 'beginner' ? 'Beginner' : 'Advanced',
+              style: Theme.of(context).textTheme.titleMedium,
+            ),
+          ),
+          for (final group in vocabularyGroups.where(
+            (group) => group.topic.level == level,
+          ))
+            Padding(
+              padding: const EdgeInsets.only(bottom: 8),
+              child: _TopicProgressIndicator(
+                progress: group,
+                groupKey: 'vocabulary-${group.topic.id}',
+              ),
+            ),
+        ],
+        const SizedBox(height: 20),
+        Text(
           'Conjugation progress',
           style: Theme.of(context).textTheme.titleLarge,
         ),
@@ -679,6 +728,12 @@ class _ProgressOverview extends StatelessWidget {
                       uniquePromptsCorrect: 0,
                       uniquePromptsIncorrect: 0,
                     ),
+                topicProgress: LearningProgress.conjugation(
+                  entries: conjugations,
+                  history: conjugationHistory,
+                  language: language,
+                  level: level,
+                ),
               ),
             ),
       ],
@@ -691,11 +746,13 @@ class _ConjugationProgressCard extends StatelessWidget {
     required this.language,
     required this.level,
     required this.progress,
+    required this.topicProgress,
   });
 
   final ConjugationLanguage language;
   final ProficiencyLevel level;
   final ConjugationProgress progress;
+  final List<TopicLearningProgress> topicProgress;
 
   @override
   Widget build(BuildContext context) {
@@ -735,6 +792,90 @@ class _ConjugationProgressCard extends StatelessWidget {
                     ),
                   ),
               ],
+            ),
+            const SizedBox(height: 16),
+            for (final group in topicProgress)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: _TopicProgressIndicator(
+                  progress: group,
+                  groupKey:
+                      'conjugation-${language.id}-${level.name}-'
+                      '${group.topic.id}',
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TopicProgressIndicator extends StatelessWidget {
+  const _TopicProgressIndicator({
+    required this.progress,
+    required this.groupKey,
+  });
+
+  final TopicLearningProgress progress;
+  final String groupKey;
+
+  @override
+  Widget build(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final completed = progress.isComplete;
+    return Semantics(
+      container: true,
+      label:
+          '${progress.topic.label}, ${progress.successfulCandidates} of '
+          '${progress.totalCandidates} correctly practiced'
+          '${completed ? ', completed' : ''}',
+      child: Container(
+        key: ValueKey('learning-group-$groupKey'),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: completed ? colorScheme.primaryContainer : Colors.white,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(
+            color: completed
+                ? colorScheme.primary.withValues(alpha: 0.45)
+                : const Color(0xffedf0e7),
+          ),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    progress.topic.label,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                ),
+                Text(
+                  '${progress.successfulCandidates} / '
+                  '${progress.totalCandidates}',
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                if (completed) ...[
+                  const SizedBox(width: 6),
+                  Icon(
+                    Icons.check_circle_rounded,
+                    color: colorScheme.primary,
+                    size: 20,
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 8),
+            LinearProgressIndicator(
+              key: ValueKey('learning-progress-$groupKey'),
+              value: progress.fraction,
+              semanticsLabel: '${progress.topic.label} progress',
+              semanticsValue: '${(progress.fraction * 100).round()}',
+              minHeight: 8,
+              borderRadius: BorderRadius.circular(8),
             ),
           ],
         ),
@@ -1188,7 +1329,7 @@ class _ConjugationSetupScreenState extends State<ConjugationSetupScreen> {
       topicId: _topicId,
       practiceHistory: _practiceHistory,
     );
-    Navigator.of(context).pushReplacement<void, void>(
+    Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (context) =>
             ConjugationPracticeScreen(store: widget.store, session: session),
