@@ -448,7 +448,7 @@ class _VocabularySetupScreenState extends State<VocabularySetupScreen> {
             key: const ValueKey('start-vocabulary-session'),
             onPressed: count == 0
                 ? null
-                : () => Navigator.of(context).pushReplacement<void, void>(
+                : () => Navigator.of(context).push<void>(
                     MaterialPageRoute<void>(
                       builder: (context) => PracticeScreen(
                         store: widget.store,
@@ -1329,7 +1329,7 @@ class _ConjugationSetupScreenState extends State<ConjugationSetupScreen> {
       topicId: _topicId,
       practiceHistory: _practiceHistory,
     );
-    Navigator.of(context).pushReplacement<void, void>(
+    Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (context) =>
             ConjugationPracticeScreen(store: widget.store, session: session),

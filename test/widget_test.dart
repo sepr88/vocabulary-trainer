@@ -160,7 +160,7 @@ void main() {
     await tester.tap(find.text('Done'));
     await tester.pumpAndSettle();
     expect(find.text('Items practiced'), findsOneWidget);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('Conjugation progress'), findsOneWidget);
   });
 
   testWidgets(
@@ -264,6 +264,101 @@ void main() {
       );
     },
   );
+
+  testWidgets('refreshes group progress after a vocabulary session finishes', (
+    tester,
+  ) async {
+    final store = _MemoryStore([
+      _entryWithTopic('family-1', 'family-and-people'),
+    ]);
+    await tester.pumpWidget(MyApp(storeLoader: () async => store));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Start practice'));
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull);
+    expect(find.text('Vocabulary practice'), findsOneWidget);
+    await tester.drag(find.byType(ListView), const Offset(0, -1800));
+    await tester.pumpAndSettle();
+    final startSession = find.byKey(const ValueKey('start-vocabulary-session'));
+    await tester.tap(startSession);
+    await tester.pumpAndSettle();
+    final germanToPortuguese = find
+        .text('German → Portuguese')
+        .evaluate()
+        .isNotEmpty;
+    await tester.enterText(
+      find.byKey(const ValueKey('practice-answer')),
+      germanToPortuguese ? 'a casa' : 'das Haus',
+    );
+    await tester.pump();
+    expect(
+      tester
+          .widget<FilledButton>(
+            find.widgetWithText(FilledButton, 'Check answer'),
+          )
+          .onPressed,
+      isNotNull,
+    );
+    await tester.tap(find.text('Check answer'));
+    await tester.pumpAndSettle();
+    expect(find.text('Correct'), findsOneWidget);
+    await tester.drag(find.byType(ListView), const Offset(0, -800));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Finish session'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+
+    final progressBar = tester.widget<LinearProgressIndicator>(
+      find.byKey(
+        const ValueKey('learning-progress-vocabulary-family-and-people'),
+      ),
+    );
+    expect(progressBar.value, 1);
+    expect(store.attempts, [true]);
+  });
+
+  testWidgets('refreshes conjugation group progress after a session finishes', (
+    tester,
+  ) async {
+    final store = _MemoryStore(
+      [sampleEntry()],
+      conjugations: [_conjugationWithTopic('home-verb', 'daily-life-and-home')],
+    );
+    await tester.pumpWidget(MyApp(storeLoader: () async => store));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.text('Practice conjugation'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Start session (2 prompts)'));
+    await tester.pumpAndSettle();
+
+    for (var index = 0; index < 2; index++) {
+      await tester.enterText(
+        find.byKey(const ValueKey('conjugation-answer')),
+        storeAnswerFor(tester),
+      );
+      await tester.testTextInput.receiveAction(TextInputAction.done);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text(index == 1 ? 'Finish session' : 'Next'));
+      await tester.pumpAndSettle();
+    }
+
+    expect(find.text('Conjugation session complete'), findsOneWidget);
+    await tester.tap(find.text('Done'));
+    await tester.pumpAndSettle();
+
+    final progressBar = tester.widget<LinearProgressIndicator>(
+      find.byKey(
+        const ValueKey(
+          'learning-progress-conjugation-de-beginner-daily-life-and-home',
+        ),
+      ),
+    );
+    expect(progressBar.value, 1);
+    expect(store.conjugationAttempts, [true, true]);
+  });
 
   testWidgets('conjugation setup shows the capped session prompt count', (
     tester,
