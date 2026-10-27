@@ -163,6 +163,108 @@ void main() {
     expect(find.text('1'), findsOneWidget);
   });
 
+  testWidgets(
+    'home shows correct-answer progress and highlights completed groups',
+    (tester) async {
+      final entries = [
+        _entryWithTopic('family-1', 'family-and-people'),
+        _entryWithTopic('family-2', 'family-and-people'),
+        _entryWithTopic('time-1', 'numbers-dates-and-time'),
+      ];
+      final conjugations = [
+        _conjugationWithTopic('home-verb', 'daily-life-and-home'),
+        _conjugationWithTopic('movement-verb', 'movement-and-travel'),
+      ];
+      final store = _MemoryStore(entries, conjugations: conjugations);
+      await store.recordAttempt(
+        attemptId: 'family-correct',
+        entryId: 'family-1',
+        correct: true,
+      );
+      await store.recordAttempt(
+        attemptId: 'family-reveal',
+        entryId: 'family-2',
+        correct: false,
+      );
+      await store.recordAttempt(
+        attemptId: 'time-correct',
+        entryId: 'time-1',
+        correct: true,
+      );
+      await store.recordConjugationAttempt(
+        attemptId: 'home-correct',
+        conjugationId: 'home-verb',
+        subjectId: 'ich',
+        correct: true,
+      );
+      await store.recordConjugationAttempt(
+        attemptId: 'home-reveal',
+        conjugationId: 'home-verb',
+        subjectId: 'du',
+        correct: false,
+      );
+      for (final subjectId in ['ich', 'du']) {
+        await store.recordConjugationAttempt(
+          attemptId: 'movement-$subjectId',
+          conjugationId: 'movement-verb',
+          subjectId: subjectId,
+          correct: true,
+        );
+      }
+
+      await tester.pumpWidget(MyApp(storeLoader: () async => store));
+      await tester.pumpAndSettle();
+
+      final familyBar = tester.widget<LinearProgressIndicator>(
+        find.byKey(
+          const ValueKey('learning-progress-vocabulary-family-and-people'),
+        ),
+      );
+      expect(familyBar.value, 0.5);
+      final familyGroup = tester.widget<Container>(
+        find.byKey(
+          const ValueKey('learning-group-vocabulary-family-and-people'),
+        ),
+      );
+      expect(familyGroup.decoration, isA<BoxDecoration>());
+      expect((familyGroup.decoration! as BoxDecoration).color, Colors.white);
+
+      final timeGroup = tester.widget<Container>(
+        find.byKey(
+          const ValueKey('learning-group-vocabulary-numbers-dates-and-time'),
+        ),
+      );
+      expect(
+        (timeGroup.decoration! as BoxDecoration).color,
+        Theme.of(tester.element(find.byType(HomeScreen)))
+            .colorScheme
+            .primaryContainer,
+      );
+
+      final conjugationBar = tester.widget<LinearProgressIndicator>(
+        find.byKey(
+          const ValueKey(
+            'learning-progress-conjugation-de-beginner-daily-life-and-home',
+          ),
+        ),
+      );
+      expect(conjugationBar.value, 0.5);
+      final completedConjugationGroup = tester.widget<Container>(
+        find.byKey(
+          const ValueKey(
+            'learning-group-conjugation-de-beginner-movement-and-travel',
+          ),
+        ),
+      );
+      expect(
+        (completedConjugationGroup.decoration! as BoxDecoration).color,
+        Theme.of(tester.element(find.byType(HomeScreen)))
+            .colorScheme
+            .primaryContainer,
+      );
+    },
+  );
+
   testWidgets('conjugation setup shows the capped session prompt count', (
     tester,
   ) async {
@@ -258,6 +360,33 @@ String storeAnswerFor(WidgetTester tester) {
   if (find.text('ich').evaluate().isNotEmpty) return 'bin';
   if (find.text('du').evaluate().isNotEmpty) return 'bist';
   throw StateError('No supported subject prompt was displayed.');
+}
+
+VocabularyEntry _entryWithTopic(String id, String topic) {
+  final entry = sampleEntry(id: id);
+  return VocabularyEntry(
+    id: entry.id,
+    level: entry.level,
+    topic: topic,
+    german: entry.german,
+    portuguese: entry.portuguese,
+    germanExample: entry.germanExample,
+    portugueseExample: entry.portugueseExample,
+  );
+}
+
+ConjugationEntry _conjugationWithTopic(String id, String topic) {
+  final entry = sampleConjugation(id: id);
+  return ConjugationEntry(
+    id: entry.id,
+    language: entry.language,
+    level: entry.level,
+    topic: topic,
+    infinitive: entry.infinitive,
+    translation: entry.translation,
+    tense: entry.tense,
+    subjects: entry.subjects,
+  );
 }
 
 class _MemoryStore implements TrainerStore {
